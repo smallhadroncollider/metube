@@ -1,0 +1,9 @@
+node_modules/
+dist/
+data.db
+data.db.bkp
+.pi-lens/
+.env
+.bun/
+sessions/
+prompt.txt

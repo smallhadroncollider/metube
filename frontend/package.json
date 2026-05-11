@@ -1,0 +1,29 @@
+{
+  "name": "me-tube-frontend",
+  "private": true,
+  "scripts": {
+    "dev": "bun run vite",
+    "build": "bun run vite build",
+    "test": "bun test tests"
+  },
+  "dependencies": {
+    "@reduxjs/toolkit": "^2.5.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.1.1",
+    "redux-saga": "^1.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.3",
+    "@types/react-dom": "^19.0.2",
+    "@types/react-redux": "^7.1.34",
+    "@types/redux-saga": "^0.10.3",
+    "@vitejs/plugin-react": "^4.3.4",
+    "bun-types": "^1.3.13",
+    "jsdom": "^25.0.1",
+    "sass": "^1.83.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  }
+}

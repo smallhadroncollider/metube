@@ -1,0 +1,13 @@
+services:
+  me-tube:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - db-data:/app
+    restart: unless-stopped
+
+volumes:
+  db-data:

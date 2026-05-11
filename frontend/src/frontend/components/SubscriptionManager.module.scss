@@ -1,0 +1,118 @@
+.manager {
+  border: 1px solid rgba(128, 128, 128, 0.2);
+  border-radius: 12px;
+  padding: 16px;
+  height: fit-content;
+  position: sticky;
+  top: 20px;
+}
+
+.dark .manager {
+  background: #16213e;
+}
+
+.light .manager {
+  background: white;
+}
+
+.heading {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.search {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  input {
+    flex: 1;
+  }
+
+  button {
+    background: #6366f1;
+    color: white;
+    padding: 8px 12px;
+    font-size: 13px;
+
+    &:hover {
+      background: #4f46e5;
+    }
+  }
+}
+
+.results {
+  margin-bottom: 20px;
+
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    opacity: 0.7;
+  }
+}
+
+.subscriptions {
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    opacity: 0.7;
+  }
+}
+
+.channel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  border-radius: 8px;
+  margin-bottom: 4px;
+
+  &:hover {
+    background: rgba(128, 128, 128, 0.1);
+  }
+}
+
+.channelThumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.channelName {
+  flex: 1;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subscribeBtn {
+  background: #22c55e;
+  color: white;
+  padding: 4px 10px;
+  font-size: 12px;
+
+  &:hover {
+    background: #16a34a;
+  }
+}
+
+.unsubscribeBtn {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  padding: 4px 10px;
+  font-size: 12px;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+  }
+}
+
+.subscribed {
+  font-size: 12px;
+  color: #22c55e;
+}
