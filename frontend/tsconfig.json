@@ -18,5 +18,10 @@
       "@/*": ["src/frontend/*"]
     }
   },
-  "include": ["src/frontend/**/*.ts", "src/frontend/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"]
+  "include": [
+    "src/frontend/**/*.ts",
+    "src/frontend/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx"
+  ]
 }

@@ -10,14 +10,14 @@ import toastsReducer from "../slices/toastsSlice.js";
 const sagaMiddleware = createSagaMiddleware();
 
 export const store = configureStore({
-	reducer: {
-		auth: authReducer,
-		videos: videosReducer,
-		subscriptions: subscriptionsReducer,
-		ui: uiReducer,
-		toasts: toastsReducer,
-	},
-	middleware: (getDefault) => getDefault().concat(sagaMiddleware),
+  reducer: {
+    auth: authReducer,
+    videos: videosReducer,
+    subscriptions: subscriptionsReducer,
+    ui: uiReducer,
+    toasts: toastsReducer,
+  },
+  middleware: (getDefault) => getDefault().concat(sagaMiddleware),
 });
 
 sagaMiddleware.run(rootSaga);

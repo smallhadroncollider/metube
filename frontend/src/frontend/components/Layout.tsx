@@ -6,15 +6,15 @@ import MainContent from "./MainContent.js";
 import ToastContainer from "./ToastContainer.js";
 
 const Layout = () => {
-	const darkMode = useSelector((state: RootState) => state.ui.darkMode);
+  const darkMode = useSelector((state: RootState) => state.ui.darkMode);
 
-	return (
-		<div className={darkMode ? "dark" : "light"}>
-			<Header />
-			<MainContent />
-			<ToastContainer />
-		</div>
-	);
+  return (
+    <div className={darkMode ? "dark" : "light"}>
+      <Header />
+      <MainContent />
+      <ToastContainer />
+    </div>
+  );
 };
 
 export default Layout;

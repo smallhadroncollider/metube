@@ -5,13 +5,13 @@ import { sagaCheckAuthStarted } from "../slices/authSlice.js";
 import Layout from "./Layout.js";
 
 const App = () => {
-	const dispatch = useDispatch<AppDispatch>();
+  const dispatch = useDispatch<AppDispatch>();
 
-	useEffect(() => {
-		dispatch(sagaCheckAuthStarted());
-	}, [dispatch]);
+  useEffect(() => {
+    dispatch(sagaCheckAuthStarted());
+  }, [dispatch]);
 
-	return <Layout />;
+  return <Layout />;
 };
 
 export default App;

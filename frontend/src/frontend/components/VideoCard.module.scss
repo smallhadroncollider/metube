@@ -2,7 +2,9 @@
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  transition: transform 0.2s, opacity 0.2s;
+  transition:
+    transform 0.2s,
+    opacity 0.2s;
   touch-action: none;
   cursor: grab;
 

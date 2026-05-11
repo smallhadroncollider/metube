@@ -5,11 +5,11 @@ import App from "./components/App";
 
 const container = document.getElementById("root");
 if (!container) {
-	throw new Error("Root element not found");
+  throw new Error("Root element not found");
 }
 
 createRoot(container).render(
-	<Provider store={store}>
-		<App />
-	</Provider>,
+  <Provider store={store}>
+    <App />
+  </Provider>,
 );

@@ -1,7 +1,10 @@
 {
   "name": "me-tube",
   "private": true,
-  "workspaces": ["backend", "frontend"],
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
     "dev:backend": "bun --watch backend/src/index.ts",
     "dev:frontend": "bun run --cwd frontend dev",

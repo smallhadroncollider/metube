@@ -4,24 +4,24 @@ import Toast from "./Toast.js";
 import styles from "./ToastContainer.module.scss";
 
 const ToastContainer = () => {
-	const toasts = useSelector((state: RootState) => state.toasts.toasts);
+  const toasts = useSelector((state: RootState) => state.toasts.toasts);
 
-	if (toasts.length === 0) {
-		return null;
-	}
+  if (toasts.length === 0) {
+    return null;
+  }
 
-	return (
-		<div className={styles.container}>
-			{toasts.map((toast) => (
-				<Toast
-					key={toast.id}
-					id={toast.id}
-					message={toast.message}
-					type={toast.type}
-				/>
-			))}
-		</div>
-	);
+  return (
+    <div className={styles.container}>
+      {toasts.map((toast) => (
+        <Toast
+          key={toast.id}
+          id={toast.id}
+          message={toast.message}
+          type={toast.type}
+        />
+      ))}
+    </div>
+  );
 };
 
 export default ToastContainer;
