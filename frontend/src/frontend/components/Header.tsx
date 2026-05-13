@@ -27,19 +27,13 @@ const Header = ({
 					<button className={styles.themeToggle} onClick={onToggleDarkMode}>
 						{darkMode ? "☀️" : "🌙"}
 					</button>
-					{isAuthenticated ? (
+					{isAuthenticated && (
 						<div className={styles.user}>
 							<img src={userPicture} alt={userName} className={styles.avatar} />
 							<span className={styles.userName}>{userName}</span>
 							<button className={styles.logout} onClick={onLogout}>
 								Logout
 							</button>
-						</div>
-					) : (
-						<div className={styles.notAuthenticated}>
-							<a href="/auth/google" className={styles.loginBtn}>
-								Sign in with Google
-							</a>
 						</div>
 					)}
 				</div>

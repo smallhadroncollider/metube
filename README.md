@@ -103,8 +103,8 @@ bun run test:frontend
 - **Runtime**: Bun with TypeScript
 - **Database**: SQLite (built-in `bun:sqlite`)
 - **Framework**: Express.js
-- **Auth**: Google OAuth 2.0 with persistent tokens in SQLite
-- **Sessions**: File-based session store (survives restarts)
+- **Auth**: Google OAuth 2.0 Device Flow with persistent tokens in SQLite
+- **Sessions**: SQLite-based session store (survives restarts)
 - **API**: REST API with session-based auth
 
 ### Frontend
@@ -147,13 +147,13 @@ bun run test:frontend
 
 1. Create a project in [Google Cloud Console](https://console.cloud.google.com/)
 2. Enable **YouTube Data API v3**
-3. Create OAuth 2.0 credentials (Desktop app or Web application)
+3. Create OAuth 2.0 device credentials
 4. Create a YouTube playlist and note its ID
 5. Add an API key for non-authenticated requests
 
 ## Usage
 
-1. Open `http://localhost:5173` in your browser
+1. Open `http://localhost:5175` in your browser
 2. Sign in with Google
 3. Search for channels and subscribe
 4. Click "Sync Channels" to fetch new videos

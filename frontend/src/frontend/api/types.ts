@@ -5,6 +5,20 @@ export type AuthStatus = {
 	userId?: number;
 };
 
+export type DeviceAuthResponse = {
+	user_code: string;
+	verification_url: string;
+	device_code: string;
+	interval: number;
+	expires_in: number;
+};
+
+export type DevicePollResponse =
+	| { status: "complete"; userId: number }
+	| { status: "pending" }
+	| { status: "slow_down" }
+	| { status: "error"; error: string };
+
 export type VideosResponse = {
 	videos: Video[];
 };

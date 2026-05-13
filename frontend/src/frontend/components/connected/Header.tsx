@@ -1,7 +1,9 @@
 import { connect } from "react-redux";
 import type { RootState, AppDispatch } from "../../store/configureStore.js";
 import Header from "../Header.js";
-import { sagaLogoutRequested } from "../../slices/authSlice.js";
+import {
+	sagaLogoutRequested,
+} from "../../slices/authSlice.js";
 import { toggleDarkMode } from "../../slices/uiSlice.js";
 
 const mapState = (state: RootState) => ({

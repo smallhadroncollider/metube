@@ -1,4 +1,4 @@
-import { takeEvery, put, call, all } from "redux-saga/effects";
+import { takeEvery, put, call, all, delay } from "redux-saga/effects";
 import type { CallEffect, PutEffect } from "redux-saga/effects";
 import {
 	sagaCheckAuthStarted,
@@ -7,6 +7,11 @@ import {
 	sagaAuthError,
 	sagaLogoutRequested,
 	sagaLogoutSucceeded,
+	sagaDeviceAuthStart,
+	sagaDeviceAuthRequested,
+	sagaDeviceAuthPolling,
+	sagaDeviceAuthFailed,
+	sagaDeviceAuthExpired,
 } from "../slices/authSlice.js";
 import {
 	sagaFetchVideosStarted,
@@ -33,6 +38,8 @@ import {
 import * as api from "../api/index.js";
 import type {
 	AuthStatus,
+	DeviceAuthResponse,
+	DevicePollResponse,
 	VideosResponse,
 	SubscriptionsResponse,
 	SearchResponse,
@@ -54,9 +61,82 @@ function* checkAuth(): Generator<CallEffect | PutEffect, void, never> {
 			yield put(sagaFetchSubscriptionsStarted());
 		} else {
 			yield put(sagaCheckAuthFailed());
+			yield put(sagaDeviceAuthStart());
 		}
 	} catch {
 		yield put(sagaCheckAuthFailed());
+	}
+}
+
+function* requestDeviceAuth(_action: {
+	payload: void;
+}): Generator<CallEffect | PutEffect, void, DeviceAuthResponse> {
+	try {
+		const deviceAuth = (yield call(
+			api.requestDeviceAuth,
+		)) as unknown as DeviceAuthResponse;
+		yield put(
+			sagaDeviceAuthRequested({
+				userCode: deviceAuth.user_code,
+				verificationUrl: deviceAuth.verification_url,
+				deviceCode: deviceAuth.device_code,
+				interval: deviceAuth.interval,
+				expiresIn: deviceAuth.expires_in,
+			}),
+		);
+	} catch (error) {
+		yield put(sagaAuthError((error as Error).message));
+	}
+}
+
+function* pollDeviceToken(action: {
+	payload: { deviceCode: string; interval: number; expiresIn: number };
+}): Generator<CallEffect | PutEffect, void, unknown> {
+	const { deviceCode, interval } = action.payload;
+
+	while (true) {
+		const pollResponse = (yield call(
+			api.pollDeviceToken,
+			deviceCode,
+		)) as unknown as DevicePollResponse;
+
+		if (pollResponse.status === "complete") {
+			const userResponse = (yield call(api.getUser)) as unknown as {
+				user: User;
+				playlistId: string;
+			};
+			yield put(sagaCheckAuthSucceeded(userResponse.user));
+			yield put(sagaFetchVideosStarted());
+			yield put(sagaFetchSubscriptionsStarted());
+			yield put(
+				addToast({ message: "Signed in successfully", type: "success" }),
+			);
+			break;
+		}
+
+		if (pollResponse.status === "error") {
+			yield put(
+				addToast({
+					message:
+						pollResponse.error === "invalid_grant"
+							? "Authorization expired. Please try signing in again."
+							: `Auth failed: ${pollResponse.error}`,
+					type: "error",
+				}),
+			);
+			yield put(sagaDeviceAuthFailed());
+			break;
+		}
+
+		yield put(
+			sagaDeviceAuthPolling({
+				status: pollResponse.status === "slow_down" ? "slow_down" : "pending",
+			}),
+		);
+
+		const waitTime =
+			pollResponse.status === "slow_down" ? 2000 : interval * 1000;
+		yield delay(waitTime);
 	}
 }
 
@@ -92,7 +172,12 @@ function* addVideo(action: {
 		yield put(sagaAddVideoSucceeded({ videoId: action.payload.videoId }));
 	} catch (error) {
 		const errorMessage = (error as Error).message;
-		yield put(sagaAddVideoFailed({ videoId: action.payload.videoId, error: errorMessage }));
+		yield put(
+			sagaAddVideoFailed({
+				videoId: action.payload.videoId,
+				error: errorMessage,
+			}),
+		);
 		yield put(addToast({ message: errorMessage, type: "error" }));
 	}
 }
@@ -184,6 +269,8 @@ export default function* rootSaga(): Generator<unknown, void, unknown> {
 	yield all([
 		takeEvery(sagaCheckAuthStarted, checkAuth),
 		takeEvery(sagaLogoutRequested, logout),
+		takeEvery(sagaDeviceAuthStart, requestDeviceAuth),
+		takeEvery(sagaDeviceAuthRequested, pollDeviceToken),
 		takeEvery(sagaFetchVideosStarted, fetchVideos),
 		takeEvery(sagaAddVideoRequested, addVideo),
 		takeEvery(sagaIgnoreVideoRequested, ignoreVideo),

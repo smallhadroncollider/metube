@@ -13,11 +13,12 @@ const Toast = ({ id, message, type }: ToastProps) => {
 	const dispatch = useDispatch();
 
 	useEffect(() => {
+		const duration = type === "error" ? 10000 : 5000;
 		const timer = setTimeout(() => {
 			dispatch(removeToast(id));
-		}, 5000);
+		}, duration);
 		return () => clearTimeout(timer);
-	}, [id, dispatch]);
+	}, [id, dispatch, type]);
 
 	return (
 		<div className={`${styles.toast} ${styles[type]}`}>

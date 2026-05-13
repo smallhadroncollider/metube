@@ -32,6 +32,9 @@ type SearchItem = {
 			default?: { url: string };
 			high?: { url: string };
 		};
+		channelThumbnails: {
+			default: { url: string };
+		};
 	};
 };
 
@@ -80,7 +83,7 @@ const fetchApi = async <T>(
 		url.searchParams.append(key, String(value));
 	}
 	url.searchParams.append("key", apiKey);
-const response = await fetch(url.toString());
+	const response = await fetch(url.toString());
 	if (!response.ok) {
 		const body = await response.text();
 		throw new Error(
@@ -128,7 +131,10 @@ export const searchChannels = async (
 		.map((item) => ({
 			channelId: item.id.channelId ?? "",
 			title: item.snippet.title,
-			thumbnail: item.snippet.thumbnails.default?.url ?? "",
+			thumbnail:
+				item.snippet.channelThumbnails?.default?.url ??
+				item.snippet.thumbnails?.default?.url ??
+				"",
 		}))
 		.filter((channel) => channel.channelId !== "");
 };
