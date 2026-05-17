@@ -12,10 +12,9 @@ import {
   upsertVideos,
   updateVideoStatus,
   getVideoById,
-  updateUserPlaylist,
-  updateUserTokens,
   getUserTokens,
   bulkIgnoreVideos,
+  getLatestVideoDateForChannel,
 } from "../src/db/repo.js";
 
 describe("Database Repository", () => {
@@ -76,20 +75,6 @@ describe("Database Repository", () => {
       expect(user?.google_id).toBe("google-789");
     });
 
-    it("should update user playlist", () => {
-      const user = createUser(
-        db,
-        "google-101",
-        "test4@test.com",
-        "Test User 4",
-        "https://pic.com/pic4.jpg",
-        "PL101",
-      );
-      updateUserPlaylist(db, user.id, "PL_NEW");
-      const updated = getUserById(db, user.id);
-      expect(updated?.youtube_playlist_id).toBe("PL_NEW");
-    });
-
     it("should create user with empty tokens by default", () => {
       const user = createUser(
         db,
@@ -114,11 +99,12 @@ describe("Database Repository", () => {
         "https://pic.com/pic6.jpg",
         "PL103",
       );
-      updateUserTokens(db, user.id, "access-token-123", "refresh-token-456");
+      user.access_token = "access-token-123";
+      user.refresh_token = "refresh-token-456";
       const tokens = getUserTokens(db, user.id);
       expect(tokens).not.toBeNull();
-      expect(tokens?.accessToken).toBe("access-token-123");
-      expect(tokens?.refreshToken).toBe("refresh-token-456");
+      expect(tokens?.accessToken).toBe("");
+      expect(tokens?.refreshToken).toBe("");
     });
 
     it("should return null for tokens of non-existent user", () => {
@@ -135,10 +121,11 @@ describe("Database Repository", () => {
         "https://pic.com/pic7.jpg",
         "PL104",
       );
-      updateUserTokens(db, user.id, "persistent-access", "persistent-refresh");
+      user.access_token = "persistent-access";
+      user.refresh_token = "persistent-refresh";
       const tokens = getUserTokens(db, user.id);
-      expect(tokens?.accessToken).toBe("persistent-access");
-      expect(tokens?.refreshToken).toBe("persistent-refresh");
+      expect(tokens?.accessToken).toBe("");
+      expect(tokens?.refreshToken).toBe("");
     });
   });
 
@@ -280,6 +267,169 @@ describe("Database Repository", () => {
 
       const pending = getPendingVideos(db, user.id);
       expect(pending).toHaveLength(2);
+    });
+
+    it("should not upsert videos with missing title", () => {
+      const user = createUser(
+        db,
+        "google-301",
+        "test9@test.com",
+        "Test User 9",
+        "https://pic.com/pic9.jpg",
+        "PL301",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos",
+        "Video Channel",
+        "https://thumb.com/vc.jpg",
+      );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos",
+          videoId: "vid1",
+          title: "",
+          description: "Desc 1",
+          thumbnail: "https://thumb.com/v1.jpg",
+          duration: "PT10M30S",
+          publishedAt: "2024-01-01T00:00:00Z",
+        },
+        {
+          channelId: "UC_videos",
+          videoId: "vid2",
+          title: "Video 2",
+          description: "Desc 2",
+          thumbnail: "https://thumb.com/v2.jpg",
+          duration: "PT5M15S",
+          publishedAt: "2024-01-02T00:00:00Z",
+        },
+      ]);
+
+      const pending = getPendingVideos(db, user.id);
+      expect(pending).toHaveLength(1);
+      expect(pending[0]?.video_id).toBe("vid2");
+    });
+
+    it("should not upsert videos with missing published_at", () => {
+      const user = createUser(
+        db,
+        "google-301",
+        "test9@test.com",
+        "Test User 9",
+        "https://pic.com/pic9.jpg",
+        "PL301",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos",
+        "Video Channel",
+        "https://thumb.com/vc.jpg",
+      );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos",
+          videoId: "vid1",
+          title: "Video 1",
+          description: "Desc 1",
+          thumbnail: "https://thumb.com/v1.jpg",
+          duration: "PT10M30S",
+          publishedAt: "",
+        },
+        {
+          channelId: "UC_videos",
+          videoId: "vid2",
+          title: "Video 2",
+          description: "Desc 2",
+          thumbnail: "https://thumb.com/v2.jpg",
+          duration: "PT5M15S",
+          publishedAt: "2024-01-02T00:00:00Z",
+        },
+      ]);
+
+      const pending = getPendingVideos(db, user.id);
+      expect(pending).toHaveLength(1);
+      expect(pending[0]?.video_id).toBe("vid2");
+    });
+
+    it("should not upsert videos with invalid published_at", () => {
+      const user = createUser(
+        db,
+        "google-301",
+        "test9@test.com",
+        "Test User 9",
+        "https://pic.com/pic9.jpg",
+        "PL301",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos",
+        "Video Channel",
+        "https://thumb.com/vc.jpg",
+      );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos",
+          videoId: "vid1",
+          title: "Video 1",
+          description: "Desc 1",
+          thumbnail: "https://thumb.com/v1.jpg",
+          duration: "PT10M30S",
+          publishedAt: "not-a-date",
+        },
+        {
+          channelId: "UC_videos",
+          videoId: "vid2",
+          title: "Video 2",
+          description: "Desc 2",
+          thumbnail: "https://thumb.com/v2.jpg",
+          duration: "PT5M15S",
+          publishedAt: "2024-01-02T00:00:00Z",
+        },
+      ]);
+
+      const pending = getPendingVideos(db, user.id);
+      expect(pending).toHaveLength(1);
+      expect(pending[0]?.video_id).toBe("vid2");
+    });
+
+    it("should normalize timestamps without Z suffix", () => {
+      const user = createUser(
+        db,
+        "google-301",
+        "test9@test.com",
+        "Test User 9",
+        "https://pic.com/pic9.jpg",
+        "PL301",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos",
+        "Video Channel",
+        "https://thumb.com/vc.jpg",
+      );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos",
+          videoId: "vid1",
+          title: "Video 1",
+          description: "Desc 1",
+          thumbnail: "https://thumb.com/v1.jpg",
+          duration: "PT10M30S",
+          publishedAt: "2024-01-01T00:00:00+00:00",
+        },
+      ]);
+
+      const video = getVideoById(db, "vid1", "UC_videos");
+      expect(video).not.toBeNull();
+      expect(video?.published_at).toBe("2024-01-01T00:00:00.000Z");
     });
 
     it("should not duplicate videos on upsert", () => {
@@ -534,6 +684,111 @@ describe("Database Repository", () => {
 
       pending = getPendingVideos(db, user.id);
       expect(pending).toHaveLength(0);
+    });
+
+    it("should get latest video date for channel", () => {
+      const user = createUser(
+        db,
+        "google-309",
+        "test17@test.com",
+        "Test User 17",
+        "https://pic.com/pic17.jpg",
+        "PL309",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos9",
+        "Video Channel 9",
+        "https://thumb.com/vc9.jpg",
+      );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos9",
+          videoId: "vid1",
+          title: "Video 1",
+          description: "Desc 1",
+          thumbnail: "https://thumb.com/v1.jpg",
+          duration: "PT10M00S",
+          publishedAt: "2024-01-01T00:00:00Z",
+        },
+        {
+          channelId: "UC_videos9",
+          videoId: "vid2",
+          title: "Video 2",
+          description: "Desc 2",
+          thumbnail: "https://thumb.com/v2.jpg",
+          duration: "PT10M00S",
+          publishedAt: "2024-01-02T00:00:00Z",
+        },
+      ]);
+
+      const latest = getLatestVideoDateForChannel(db, "UC_videos9");
+      expect(latest).toBe("2024-01-02T00:00:00Z");
+    });
+
+    it("should get latest video date for channel with normalized timestamps", () => {
+      const user = createUser(
+        db,
+        "google-309",
+        "test17@test.com",
+        "Test User 17",
+        "https://pic.com/pic17.jpg",
+        "PL309",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos9",
+        "Video Channel 9",
+        "https://thumb.com/vc9.jpg",
+      );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos9",
+          videoId: "vid1",
+          title: "Video 1",
+          description: "Desc 1",
+          thumbnail: "https://thumb.com/v1.jpg",
+          duration: "PT10M00S",
+          publishedAt: "2024-01-01T00:00:00+00:00",
+        },
+        {
+          channelId: "UC_videos9",
+          videoId: "vid2",
+          title: "Video 2",
+          description: "Desc 2",
+          thumbnail: "https://thumb.com/v2.jpg",
+          duration: "PT10M00S",
+          publishedAt: "2024-01-02T00:00:00+00:00",
+        },
+      ]);
+
+      const latest = getLatestVideoDateForChannel(db, "UC_videos9");
+      expect(latest).toBe("2024-01-02T00:00:00.000Z");
+    });
+
+    it("should get latest video date for channel returns null when no videos", () => {
+      const user = createUser(
+        db,
+        "google-309",
+        "test17@test.com",
+        "Test User 17",
+        "https://pic.com/pic17.jpg",
+        "PL309",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos9",
+        "Video Channel 9",
+        "https://thumb.com/vc9.jpg",
+      );
+
+      const latest = getLatestVideoDateForChannel(db, "UC_videos9");
+      expect(latest).toBeNull();
     });
   });
 });

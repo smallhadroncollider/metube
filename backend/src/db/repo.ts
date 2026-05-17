@@ -136,12 +136,43 @@ type ChannelVideo = {
   publishedAt: string;
 };
 
+export const normalizeTimestamp = (timestamp: string): string => {
+  if (timestamp.endsWith("Z")) {
+    return timestamp;
+  }
+
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString();
+};
+
+export const isTimestampValid = (timestamp: string): boolean => {
+  if (!timestamp.length) {
+    return false;
+  }
+
+  if (timestamp.endsWith("Z")) {
+    return true;
+  }
+
+  const date = new Date(timestamp);
+  return !isNaN(date.getTime());
+};
+
 export const upsertVideos = (
   db: Database,
   channelVideos: ChannelVideo[],
 ): void => {
+  const filtered = channelVideos.filter(
+    (video) => video.title !== "" && isTimestampValid(video.publishedAt),
+  );
+
   const insert = db.transaction((videos: ChannelVideo[]) => {
     for (const video of videos) {
+      const publishedAt = normalizeTimestamp(video.publishedAt);
       db.query(
         `INSERT INTO videos (channel_id, video_id, title, description, thumbnail, duration, published_at)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -153,11 +184,11 @@ export const upsertVideos = (
         video.description,
         video.thumbnail,
         video.duration,
-        video.publishedAt,
+        publishedAt,
       );
     }
   });
-  insert(channelVideos);
+  insert(filtered);
 };
 
 export const updateVideoStatus = (
@@ -207,7 +238,7 @@ export const bulkIgnoreVideos = (
       for (const video of videoList) {
         db.query(
           `INSERT INTO videos (channel_id, video_id, title, description, thumbnail, duration, published_at, status)
-           VALUES (?, ?, '', '', '', '', datetime('now'), 'ignored')
+           VALUES (?, ?, '', '', '', '', strftime('%Y-%m-%dT%H:%M:%SZ', 'now'), 'ignored')
            ON CONFLICT(channel_id, video_id) DO UPDATE SET status = 'ignored'`,
         ).run(video.channelId, video.videoId);
       }

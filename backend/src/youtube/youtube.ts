@@ -111,6 +111,19 @@ const fetchOAuth = async <T>(
   return response.json() as Promise<T>;
 };
 
+export const normalizeTimestamp = (timestamp: string): string => {
+  if (timestamp.endsWith("Z")) {
+    return timestamp;
+  }
+
+  const date = new Date(timestamp);
+  if (isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString();
+};
+
 export const searchChannels = async (
   apiKey: string,
   query: string,
@@ -136,7 +149,7 @@ export const searchChannels = async (
         item.snippet.thumbnails?.default?.url ??
         "",
     }))
-    .filter((channel) => channel.channelId !== "");
+    .filter((channel) => channel.channelId !== "" && channel.title !== "");
 };
 
 export const getChannelVideos = async (
@@ -171,9 +184,12 @@ export const getChannelVideos = async (
         item.snippet.thumbnails.high?.url ??
         item.snippet.thumbnails.default?.url ??
         "",
-      publishedAt: item.snippet.publishedAt,
+      publishedAt: normalizeTimestamp(item.snippet.publishedAt),
     }))
-    .filter((video) => video.videoId !== "");
+    .filter(
+      (video) =>
+        video.videoId !== "" && video.title !== "" && video.publishedAt !== "",
+    );
 
   if (searchVideos.length === 0) {
     return [];
@@ -278,7 +294,7 @@ export const getSubscribedChannels = async (
       title: item.snippet.title,
       thumbnail: item.snippet.thumbnails.default.url,
     }))
-    .filter((channel) => channel.channelId !== "");
+    .filter((channel) => channel.channelId !== "" && channel.title !== "");
 };
 
 export const getPlaylistVideos = async (
@@ -306,5 +322,5 @@ export const getPlaylistVideos = async (
         item.snippet.thumbnails.default?.url ??
         "",
     }))
-    .filter((video) => video.videoId !== "");
+    .filter((video) => video.videoId !== "" && video.title !== "");
 };
