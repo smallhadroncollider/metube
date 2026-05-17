@@ -23,6 +23,7 @@ import {
   sagaIgnoreVideoRequested,
   sagaIgnoreVideoSucceeded,
   sagaSyncVideosRequested,
+  sagaSyncVideosSucceeded,
 } from "../slices/videosSlice.js";
 import { addToast } from "../slices/toastsSlice.js";
 import {
@@ -200,8 +201,10 @@ function* ignoreVideo(action: {
 function* syncVideos(): Generator<CallEffect | PutEffect, void, SyncResponse> {
   try {
     yield call(api.syncVideos);
+    yield put(sagaSyncVideosSucceeded());
     yield put(sagaFetchVideosStarted());
   } catch (error) {
+    yield put(sagaSyncVideosSucceeded());
     yield put(sagaFetchVideosFailed((error as Error).message));
   }
 }

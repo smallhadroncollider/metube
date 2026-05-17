@@ -5,32 +5,32 @@ import styles from "./VideoList.module.scss";
 type VideoListProps = {
   videos: Video[];
   isLoading: boolean;
+  isSyncing: boolean;
   onAddVideo: (videoId: string, channelId: string) => void;
   onIgnoreVideo: (videoId: string, channelId: string) => void;
   onSync: () => void;
-  onRefresh: () => void;
 };
 
 const VideoList = ({
   videos,
   isLoading,
+  isSyncing,
   onAddVideo,
   onIgnoreVideo,
   onSync,
-  onRefresh,
 }: VideoListProps) => {
   return (
     <div className={styles.list}>
       <div className={styles.header}>
         <h2>New Videos</h2>
-        <div className={styles.actions}>
-          <button className={styles.syncBtn} onClick={onSync}>
-            Sync Channels
-          </button>
-          <button className={styles.refreshBtn} onClick={onRefresh}>
-            Refresh
-          </button>
-        </div>
+        <button
+          className={styles.syncBtn}
+          onClick={onSync}
+          disabled={isSyncing}
+        >
+          {isSyncing && <span className={styles.spinner} />}
+          {isSyncing ? "Syncing..." : "Sync Channels"}
+        </button>
       </div>
 
       {isLoading ? (

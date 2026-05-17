@@ -5,12 +5,12 @@ import {
   sagaAddVideoRequested,
   sagaIgnoreVideoRequested,
   sagaSyncVideosRequested,
-  sagaFetchVideosStarted,
 } from "../../slices/videosSlice.js";
 
 const mapState = (state: RootState) => ({
   videos: state.videos.videos,
   isLoading: state.videos.isLoading,
+  isSyncing: state.videos.isSyncing,
 });
 
 const mapDispatch = (dispatch: AppDispatch) => ({
@@ -19,7 +19,6 @@ const mapDispatch = (dispatch: AppDispatch) => ({
   onIgnoreVideo: (videoId: string, channelId: string) =>
     dispatch(sagaIgnoreVideoRequested({ videoId, channelId })),
   onSync: () => dispatch(sagaSyncVideosRequested()),
-  onRefresh: () => dispatch(sagaFetchVideosStarted()),
 });
 
 export default connect(mapState, mapDispatch)(VideoList);

@@ -4,12 +4,14 @@ import type { Video } from "../types/index.js";
 type VideosState = {
   videos: Video[];
   isLoading: boolean;
+  isSyncing: boolean;
   error: string | null;
 };
 
 const initialState: VideosState = {
   videos: [],
   isLoading: false,
+  isSyncing: false,
   error: null,
 };
 
@@ -76,6 +78,12 @@ const videosSlice = createSlice({
       })
       .addCase(sagaAddVideoFailed, (state, action) => {
         state.error = action.payload.error;
+      })
+      .addCase(sagaSyncVideosRequested, (state) => {
+        state.isSyncing = true;
+      })
+      .addCase(sagaSyncVideosSucceeded, (state) => {
+        state.isSyncing = false;
       });
   },
 });
