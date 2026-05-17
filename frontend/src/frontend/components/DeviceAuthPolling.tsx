@@ -31,24 +31,10 @@ const DeviceAuthPolling = ({
 
   return (
     <div className={styles.container}>
-      <h2 className={styles.title}>Sign in to MeTube</h2>
-      <p className={styles.instructions}>
-        To sign in, please do the following on another device:
+      <h2 className={styles.title}>Sign in</h2>
+      <p>
+        Go to: <a href={verificationUrl} target="_blank" rel="noreferrer" className={styles.link}>{verificationUrl}</a>
       </p>
-      <ol className={styles.steps}>
-        <li>
-          Go to{" "}
-          <a
-            href={verificationUrl}
-            target="_blank"
-            rel="noreferrer"
-            className={styles.link}
-          >
-            {verificationUrl}
-          </a>
-        </li>
-        <li>Enter the following code:</li>
-      </ol>
       <div className={styles.codeContainer}>
         <code className={styles.code}>{userCode}</code>
         <button
