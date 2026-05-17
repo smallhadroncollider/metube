@@ -1,9 +1,10 @@
-import type { Video } from "../types/index.js";
+import type { Video, Subscription } from "../types/index.js";
 import VideoCard from "./VideoCard.js";
 import styles from "./VideoList.module.scss";
 
 type VideoListProps = {
   videos: Video[];
+  subscriptions: Subscription[];
   isLoading: boolean;
   isSyncing: boolean;
   onAddVideo: (videoId: string, channelId: string) => void;
@@ -13,12 +14,16 @@ type VideoListProps = {
 
 const VideoList = ({
   videos,
+  subscriptions,
   isLoading,
   isSyncing,
   onAddVideo,
   onIgnoreVideo,
   onSync,
 }: VideoListProps) => {
+  const getChannelThumbnail = (channelId: string): string | null =>
+    subscriptions.find((s) => s.channel_id === channelId)?.channel_thumbnail ??
+    null;
   return (
     <div className={styles.list}>
       <div className={styles.header}>
@@ -48,6 +53,7 @@ const VideoList = ({
             <VideoCard
               key={video.video_id}
               video={video}
+              channelThumbnail={getChannelThumbnail(video.channel_id)}
               onAdd={() => onAddVideo(video.video_id, video.channel_id)}
               onIgnore={() => onIgnoreVideo(video.video_id, video.channel_id)}
             />

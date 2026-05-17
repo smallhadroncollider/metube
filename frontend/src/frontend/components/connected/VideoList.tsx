@@ -9,6 +9,7 @@ import {
 
 const mapState = (state: RootState) => ({
   videos: state.videos.videos,
+  subscriptions: state.subscriptions.subscriptions,
   isLoading: state.videos.isLoading,
   isSyncing: state.videos.isSyncing,
 });

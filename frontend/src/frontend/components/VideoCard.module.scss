@@ -29,11 +29,24 @@
   margin-bottom: 12px;
 }
 
+.channelLogo {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  padding: 2px;
+  z-index: 1;
+}
+
 .thumbnail {
   width: 100%;
   aspect-ratio: 16 / 9;
   object-fit: cover;
   border-radius: 8px;
+  display: block;
 }
 
 .duration {

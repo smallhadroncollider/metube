@@ -3,6 +3,7 @@ import styles from "./VideoCard.module.scss";
 
 type VideoCardProps = {
   video: Video;
+  channelThumbnail: string | null;
   onAdd: () => void;
   onIgnore: () => void;
 };
@@ -20,7 +21,7 @@ const formatDuration = (isoDuration: string): string => {
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
 };
 
-const VideoCard = ({ video, onAdd, onIgnore }: VideoCardProps) => {
+const VideoCard = ({ video, channelThumbnail, onAdd, onIgnore }: VideoCardProps) => {
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
@@ -42,6 +43,13 @@ const VideoCard = ({ video, onAdd, onIgnore }: VideoCardProps) => {
     <div className={styles.card}>
       <div className={styles.content}>
         <div className={styles.thumbnailWrapper}>
+          {channelThumbnail && (
+            <img
+              src={channelThumbnail}
+              alt={video.title}
+              className={styles.channelLogo}
+            />
+          )}
           <img
             src={video.thumbnail}
             alt={video.title}
