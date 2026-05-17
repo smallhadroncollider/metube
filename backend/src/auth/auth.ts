@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { google } from "googleapis";
 import type { OAuth2Client } from "google-auth-library";
 
@@ -7,11 +8,16 @@ const scopes = [
   "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");
 
-export type OAuthTokens = {
-  access_token: string;
-  refresh_token: string;
-  expiry_date?: number;
-};
+const OAuthTokensSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string(),
+  expiry_date: z.number().optional(),
+});
+
+export type OAuthTokens = z.infer<typeof OAuthTokensSchema>;
+
+export const parseOAuthTokens = (data: unknown): OAuthTokens =>
+  OAuthTokensSchema.parse(data);
 
 export const createOAuth2ClientFromTokens = (
   clientId: string,
@@ -49,22 +55,29 @@ export const getUserInfo = async (
       },
     },
   );
-  const data = (await response.json()) as Record<string, unknown>;
-  return {
-    id: data.id as string,
-    email: data.email as string,
-    name: data.name as string,
-    picture: data.picture as string,
-  };
+  const data = await response.json();
+  return z
+    .object({
+      id: z.string(),
+      email: z.string(),
+      name: z.string(),
+      picture: z.string(),
+    })
+    .parse(data);
 };
 
-export type DeviceAuthResponse = {
-  device_code: string;
-  user_code: string;
-  verification_url: string;
-  interval: number;
-  expires_in: number;
-};
+const DeviceAuthResponseSchema = z.object({
+  device_code: z.string(),
+  user_code: z.string(),
+  verification_url: z.string(),
+  interval: z.number(),
+  expires_in: z.number(),
+});
+
+export type DeviceAuthResponse = z.infer<typeof DeviceAuthResponseSchema>;
+
+export const parseDeviceAuthResponse = (data: unknown): DeviceAuthResponse =>
+  DeviceAuthResponseSchema.parse(data);
 
 export const requestDeviceAuthorization = async (
   clientId: string,
@@ -85,8 +98,18 @@ export const requestDeviceAuthorization = async (
     );
   }
 
-  return response.json() as Promise<DeviceAuthResponse>;
+  return DeviceAuthResponseSchema.parse(await response.json());
 };
+
+const DevicePollErrorSchema = z.object({
+  error: z.string(),
+});
+
+const DevicePollCompleteSchema = z.object({
+  access_token: z.string(),
+  refresh_token: z.string(),
+  expiry_date: z.number(),
+});
 
 export type DevicePollResponse =
   | { status: "complete"; tokens: OAuthTokens }
@@ -94,6 +117,39 @@ export type DevicePollResponse =
   | { status: "authorization_pending" }
   | { status: "slow_down" }
   | { status: "error"; error: string };
+
+export const parseDevicePollResponse = async (
+  response: Response,
+  data: unknown,
+): Promise<DevicePollResponse> => {
+  const errorData = DevicePollErrorSchema.safeParse(data);
+  if (errorData.success) {
+    const error = errorData.data.error;
+    if (error === "authorization_pending") {
+      return { status: "authorization_pending" };
+    }
+    if (error === "slow_down") {
+      return { status: "slow_down" };
+    }
+    return { status: "error", error };
+  }
+
+  if (!response.ok) {
+    throw new Error(
+      `Device token poll failed: ${response.status} ${response.statusText} - ${JSON.stringify(data)}`,
+    );
+  }
+
+  const completeData = DevicePollCompleteSchema.parse(data);
+  return {
+    status: "complete",
+    tokens: {
+      access_token: completeData.access_token,
+      refresh_token: completeData.refresh_token,
+      expiry_date: completeData.expiry_date ?? 0,
+    },
+  };
+};
 
 export const pollDeviceToken = async (
   clientId: string,
@@ -111,31 +167,6 @@ export const pollDeviceToken = async (
     }).toString(),
   });
 
-  const data = (await response.json()) as Record<string, unknown>;
-
-  if (data.error) {
-    const error = data.error as string;
-    if (error === "authorization_pending") {
-      return { status: "authorization_pending" };
-    }
-    if (error === "slow_down") {
-      return { status: "slow_down" };
-    }
-    return { status: "error", error };
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      `Device token poll failed: ${response.status} ${response.statusText} - ${JSON.stringify(data)}`,
-    );
-  }
-
-  return {
-    status: "complete",
-    tokens: {
-      access_token: data.access_token as string,
-      refresh_token: data.refresh_token as string,
-      expiry_date: (data.expiry_date as number) ?? 0,
-    },
-  };
+  const data = await response.json();
+  return parseDevicePollResponse(response, data);
 };

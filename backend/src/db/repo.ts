@@ -1,13 +1,14 @@
 import type { Database } from "bun:sqlite";
 import type { User, Subscription, Video } from "./schema.js";
 
+const queryOne = <T>(result: unknown): T | null => result as T | null;
+const queryMany = <T>(result: unknown): T[] => result as T[];
+
 export const getUserByGoogleId = (
   db: Database,
   googleId: string,
 ): User | null =>
-  db
-    .query("SELECT * FROM users WHERE google_id = ?")
-    .get(googleId) as User | null;
+  queryOne(db.query("SELECT * FROM users WHERE google_id = ?").get(googleId));
 
 export const createUser = (
   db: Database,
@@ -21,7 +22,7 @@ export const createUser = (
     `INSERT INTO users (google_id, email, name, picture, youtube_playlist_id)
        VALUES (?, ?, ?, ?, ?)`,
   ).run(googleId, email, name, picture, youtubePlaylistId);
-  return getUserByGoogleId(db, googleId) as User;
+  return getUserByGoogleId(db, googleId)!;
 };
 
 export const updateUserPlaylist = (
@@ -47,19 +48,23 @@ export const updateUserTokens = (
   ).run(accessToken, refreshToken, String(expiryDate), userId);
 };
 
+type UserTokensRow = {
+  access_token: string;
+  refresh_token: string;
+  expiry_date: string;
+};
+
 export const getUserTokens = (
   db: Database,
   userId: number,
 ): { accessToken: string; refreshToken: string; expiryDate: number } | null => {
-  const row = db
-    .query(
-      "SELECT access_token, refresh_token, expiry_date FROM users WHERE id = ?",
-    )
-    .get(userId) as {
-    access_token: string;
-    refresh_token: string;
-    expiry_date: string;
-  } | null;
+  const row = queryOne<UserTokensRow>(
+    db
+      .query(
+        "SELECT access_token, refresh_token, expiry_date FROM users WHERE id = ?",
+      )
+      .get(userId),
+  );
 
   if (!row) {
     return null;
@@ -73,17 +78,19 @@ export const getUserTokens = (
 };
 
 export const getUserById = (db: Database, id: number): User | null =>
-  db.query("SELECT * FROM users WHERE id = ?").get(id) as User | null;
+  queryOne(db.query("SELECT * FROM users WHERE id = ?").get(id));
 
 export const getSubscriptionsByUserId = (
   db: Database,
   userId: number,
 ): Subscription[] =>
-  db
-    .query(
-      "SELECT * FROM subscriptions WHERE user_id = ? ORDER BY subscribed_at DESC",
-    )
-    .all(userId) as Subscription[];
+  queryMany(
+    db
+      .query(
+        "SELECT * FROM subscriptions WHERE user_id = ? ORDER BY subscribed_at DESC",
+      )
+      .all(userId),
+  );
 
 export const addSubscription = (
   db: Database,
@@ -108,9 +115,11 @@ const getSubscriptionByUserIdAndChannelId = (
   userId: number,
   channelId: string,
 ): Subscription | null =>
-  db
-    .query("SELECT * FROM subscriptions WHERE user_id = ? AND channel_id = ?")
-    .get(userId, channelId) as Subscription | null;
+  queryOne(
+    db
+      .query("SELECT * FROM subscriptions WHERE user_id = ? AND channel_id = ?")
+      .get(userId, channelId),
+  );
 
 export const removeSubscription = (
   db: Database,
@@ -123,16 +132,18 @@ export const removeSubscription = (
 };
 
 export const getPendingVideos = (db: Database, userId: number): Video[] =>
-  db
-    .query(
-      `
-      SELECT v.* FROM videos v
-      JOIN subscriptions s ON v.channel_id = s.channel_id
-      WHERE s.user_id = ? AND v.status = 'pending'
-      ORDER BY v.published_at DESC
-    `,
-    )
-    .all(userId) as Video[];
+  queryMany(
+    db
+      .query(
+        `
+        SELECT v.* FROM videos v
+        JOIN subscriptions s ON v.channel_id = s.channel_id
+        WHERE s.user_id = ? AND v.status = 'pending'
+        ORDER BY v.published_at DESC
+      `,
+      )
+      .all(userId),
+  );
 
 type ChannelVideo = {
   channelId: string;
@@ -216,24 +227,21 @@ export const getVideoById = (
   videoId: string,
   channelId: string,
 ): Video | null =>
-  db
-    .query("SELECT * FROM videos WHERE video_id = ? AND channel_id = ?")
-    .get(videoId, channelId) as Video | null;
-
-const getDiscoveredChannelIds = (db: Database): string[] =>
-  (
-    db.query("SELECT DISTINCT channel_id FROM videos").all() as Array<{
-      channel_id: string;
-    }>
-  ).map((row) => row.channel_id);
+  queryOne(
+    db
+      .query("SELECT * FROM videos WHERE video_id = ? AND channel_id = ?")
+      .get(videoId, channelId),
+  );
 
 export const getLatestVideoDateForChannel = (
   db: Database,
   channelId: string,
 ): string | null => {
-  const row = db
-    .query("SELECT MAX(published_at) FROM videos WHERE channel_id = ?")
-    .get(channelId) as { "MAX(published_at)": string } | null;
+  const row = queryOne<{ "MAX(published_at)": string }>(
+    db
+      .query("SELECT MAX(published_at) FROM videos WHERE channel_id = ?")
+      .get(channelId),
+  );
   return row?.["MAX(published_at)"] ?? null;
 };
 

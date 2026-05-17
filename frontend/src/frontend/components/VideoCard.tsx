@@ -33,7 +33,12 @@ const formatDate = (dateString: string): string => {
   return date.toLocaleDateString();
 };
 
-const VideoCard = ({ video, channelThumbnail, onAdd, onIgnore }: VideoCardProps) => {
+const VideoCard = ({
+  video,
+  channelThumbnail,
+  onAdd,
+  onIgnore,
+}: VideoCardProps) => {
   const truncatedDescription =
     video.description.length > 120
       ? video.description.slice(0, 120) + "..."

@@ -86,7 +86,6 @@ export const initDb = (db: Database) => {
       UNIQUE(channel_id, video_id)
     )
   `);
-
 };
 
 export const createDb = createDbFn;

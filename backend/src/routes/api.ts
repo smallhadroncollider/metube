@@ -267,7 +267,10 @@ export const apiRoutes = (db: Database): IRouter => {
         duration: "",
       }));
 
-      const detailsMap = await enrichVideosWithDetails(getApiKey(), enrichedVideos);
+      const detailsMap = await enrichVideosWithDetails(
+        getApiKey(),
+        enrichedVideos,
+      );
       const finalVideos = enrichedVideos.map((video) => ({
         ...video,
         duration: detailsMap.get(video.videoId) ?? video.duration,

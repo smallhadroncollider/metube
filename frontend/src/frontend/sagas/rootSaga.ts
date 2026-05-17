@@ -50,7 +50,7 @@ import type {
   SyncResponse,
   ChannelSyncResponse,
 } from "../api/types.js";
-import type { User, Subscription } from "../types/index.js";
+import type { User } from "../types/index.js";
 
 function* checkAuth(): Generator<CallEffect | PutEffect, void, never> {
   try {
@@ -95,8 +95,10 @@ function* requestDeviceAuth(): Generator<
   }
 }
 
-const getWaitTime = (pollResponse: DevicePollResponse, interval: number): number =>
-  pollResponse.status === "slow_down" ? 2000 : interval * 1000;
+const getWaitTime = (
+  pollResponse: DevicePollResponse,
+  interval: number,
+): number => (pollResponse.status === "slow_down" ? 2000 : interval * 1000);
 
 function* pollDeviceToken(action: {
   payload: { deviceCode: string; interval: number; expiresIn: number };
@@ -117,7 +119,9 @@ function* pollDeviceToken(action: {
       yield put(sagaCheckAuthSucceeded(userResponse.user));
       yield put(sagaFetchVideosStarted());
       yield put(sagaFetchSubscriptionsStarted());
-      yield put(addToast({ message: "Signed in successfully", type: "success" }));
+      yield put(
+        addToast({ message: "Signed in successfully", type: "success" }),
+      );
       break;
     }
 
@@ -275,7 +279,7 @@ function* subscribe(action: {
       action.payload.channelTitle,
       action.payload.channelThumbnail,
     )) as SubscriptionResponse;
-    yield put(sagaSubscribeSucceeded(response.subscription as Subscription));
+    yield put(sagaSubscribeSucceeded(response.subscription));
     yield put(sagaSearchChannelsSucceeded([]));
     yield put(sagaSyncChannelVideosRequested(action.payload.channelId));
   } catch (error) {

@@ -32,5 +32,3 @@ export type ApiChannel = {
   title: string;
   thumbnail: string;
 };
-
-

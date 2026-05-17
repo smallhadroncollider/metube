@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { OAuth2Client } from "google-auth-library";
 
 type ChannelResult = {
@@ -20,56 +21,83 @@ type VideoDetailsResult = {
   duration: string;
 };
 
-type VideoItem = {
-  id: string;
-  contentDetails: {
-    duration: string;
-  };
-};
+const ThumbnailSchema = z.object({
+  url: z.string(),
+});
 
-type SearchItem = {
-  id: { channelId?: string; videoId?: string };
-  snippet: {
-    title: string;
-    description: string;
-    publishedAt: string;
-    thumbnails: {
-      default?: { url: string };
-      high?: { url: string };
-    };
-    channelThumbnails: {
-      default: { url: string };
-    };
-  };
-};
+const SearchIdSchema = z.object({
+  channelId: z.string().optional(),
+  videoId: z.string().optional(),
+});
 
-type PlaylistItem = {
-  snippet: {
-    title: string;
-    description: string;
-    publishedAt: string;
-    thumbnails: {
-      default?: { url: string };
-      high?: { url: string };
-    };
-  };
-  contentDetails: {
-    videoId: string;
-  };
-};
+const SearchSnippetSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  publishedAt: z.string(),
+  thumbnails: z
+    .object({
+      default: ThumbnailSchema.optional(),
+      high: ThumbnailSchema.optional(),
+    })
+    .strict(),
+  channelThumbnails: z
+    .object({
+      default: ThumbnailSchema,
+    })
+    .optional(),
+});
 
-type ApiListResponse<T> = {
-  items?: T[];
-  nextPageToken?: string;
-};
+const SearchItemSchema = z.object({
+  id: SearchIdSchema,
+  snippet: SearchSnippetSchema,
+});
+
+const PlaylistItemSnippetSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+  publishedAt: z.string(),
+  thumbnails: z
+    .object({
+      default: ThumbnailSchema.optional(),
+      high: ThumbnailSchema.optional(),
+    })
+    .strict(),
+});
+
+const PlaylistItemContentDetailsSchema = z.object({
+  videoId: z.string(),
+});
+
+const PlaylistItemSchema = z.object({
+  snippet: PlaylistItemSnippetSchema,
+  contentDetails: PlaylistItemContentDetailsSchema,
+});
+
+type PlaylistItem = z.infer<typeof PlaylistItemSchema>;
+
+const VideoItemSchema = z.object({
+  id: z.string(),
+  contentDetails: z.object({
+    duration: z.string(),
+  }),
+});
+
+type VideoItem = z.infer<typeof VideoItemSchema>;
+
+const ApiListResponseSchema = <T extends z.ZodTypeAny>(itemSchema: T) =>
+  z.object({
+    items: z.array(itemSchema).optional(),
+    nextPageToken: z.string().optional(),
+  });
 
 const baseUrl = "https://www.googleapis.com/youtube/v3";
 
-const fetchApi = async <T>(
+const fetchApi = async <T extends z.ZodTypeAny>(
   path: string,
   params: Record<string, string>,
   apiKey: string,
-): Promise<T> => {
+  itemSchema: T,
+): Promise<z.infer<T>> => {
   const url = new URL(`${baseUrl}${path}`);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.append(key, value);
@@ -82,7 +110,7 @@ const fetchApi = async <T>(
       `YouTube API error: ${response.status} ${response.statusText} - ${body}`,
     );
   }
-  return response.json() as Promise<T>;
+  return itemSchema.parse(await response.json());
 };
 
 export const normalizeTimestamp = (timestamp: string): string => {
@@ -102,7 +130,7 @@ export const searchChannels = async (
   apiKey: string,
   query: string,
 ): Promise<ChannelResult[]> => {
-  const response = await fetchApi<ApiListResponse<SearchItem>>(
+  const response = await fetchApi(
     "/search",
     {
       part: "snippet",
@@ -111,6 +139,7 @@ export const searchChannels = async (
       maxResults: "25",
     },
     apiKey,
+    ApiListResponseSchema(SearchItemSchema),
   );
 
   const items = response.items ?? [];
@@ -181,10 +210,11 @@ export const getChannelVideos = async (
       params.pageToken = nextPageToken;
     }
 
-    const response = await fetchApi<ApiListResponse<PlaylistItem>>(
+    const response = await fetchApi(
       "/playlistItems",
       params,
       apiKey,
+      ApiListResponseSchema(PlaylistItemSchema),
     );
 
     const items = response.items ?? [];
@@ -260,24 +290,24 @@ export const addToPlaylist = async (
     return { ok: true };
   }
 
-  const body = (await response.json()) as Record<string, unknown>;
+  const body = await response.json();
   return { ok: false, error: parseErrorFromResponse(response, body) };
 };
 
-const parseErrorFromResponse = (
-  response: Response,
-  body: Record<string, unknown>,
-): string => {
-  const errorObj = body["error"];
+const YoutubeErrorSchema = z.object({
+  message: z.string(),
+});
 
-  if (
-    typeof errorObj === "object" &&
-    errorObj !== null &&
-    typeof (errorObj as Record<string, unknown>)["message"] === "string"
-  ) {
-    return (
-      errorObj as Record<string, string>
-    )["message"] ?? `YouTube API error: ${response.status}`;
+const parseErrorFromResponse = (response: Response, body: unknown): string => {
+  const parsed = z.object({ error: z.unknown() }).safeParse(body);
+  if (!parsed.success) {
+    return `YouTube API error: ${response.status} ${response.statusText}`;
+  }
+
+  const errorObj = parsed.data.error;
+  const errorParsed = YoutubeErrorSchema.safeParse(errorObj);
+  if (errorParsed.success) {
+    return errorParsed.data.message;
   }
 
   return `YouTube API error: ${response.status} ${response.statusText}`;
@@ -296,7 +326,7 @@ export const getVideoDetails = async (
 
   for (let i = 0; i < videoIds.length; i += batchSize) {
     const batch = videoIds.slice(i, i + batchSize);
-    const response = await fetchApi<ApiListResponse<VideoItem>>(
+    const response = await fetchApi(
       "/videos",
       {
         part: "contentDetails",
@@ -304,6 +334,7 @@ export const getVideoDetails = async (
         maxResults: String(batch.length),
       },
       apiKey,
+      ApiListResponseSchema(VideoItemSchema),
     );
 
     const items = response.items ?? [];
