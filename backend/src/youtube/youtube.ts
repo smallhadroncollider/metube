@@ -15,6 +15,18 @@ type VideoResult = {
   publishedAt: string;
 };
 
+type VideoDetailsResult = {
+  videoId: string;
+  duration: string;
+};
+
+type VideoItem = {
+  id: string;
+  contentDetails: {
+    duration: string;
+  };
+};
+
 type PlaylistVideoResult = {
   videoId: string;
   title: string;
@@ -296,6 +308,41 @@ export const addToPlaylist = async (
     ok: false,
     error: rawMessage ?? `YouTube API error: ${response.status}`,
   };
+};
+
+export const getVideoDetails = async (
+  apiKey: string,
+  videoIds: string[],
+): Promise<VideoDetailsResult[]> => {
+  if (videoIds.length === 0) {
+    return [];
+  }
+
+  const results: VideoDetailsResult[] = [];
+  const batchSize = 50;
+
+  for (let i = 0; i < videoIds.length; i += batchSize) {
+    const batch = videoIds.slice(i, i + batchSize);
+    const response = await fetchApi<ApiListResponse<VideoItem>>(
+      "/videos",
+      {
+        part: "contentDetails",
+        id: batch.join(","),
+        maxResults: String(batch.length),
+      },
+      apiKey,
+    );
+
+    const items = response.items ?? [];
+    for (const item of items) {
+      results.push({
+        videoId: item.id,
+        duration: item.contentDetails.duration,
+      });
+    }
+  }
+
+  return results;
 };
 
 export const getSubscribedChannels = async (

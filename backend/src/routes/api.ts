@@ -4,6 +4,7 @@ import type { OAuth2Client } from "google-auth-library";
 import {
   searchChannels,
   getChannelVideos,
+  getVideoDetails,
   addToPlaylist,
   parseDurationSeconds,
 } from "../youtube/youtube.js";
@@ -235,10 +236,32 @@ export const apiRoutes = (db: Database): IRouter => {
       }
     }
 
-    const withinRange: typeof allVideos = [];
+    if (allVideos.length === 0) {
+      res.json({ synced: 0, ignored: 0 });
+      return;
+    }
+
+    const videoIds = allVideos.map((video) => video.videoId);
+    const detailsMap = new Map<string, string>();
+
+    try {
+      const videoDetails = await getVideoDetails(getApiKey(), videoIds);
+      for (const detail of videoDetails) {
+        detailsMap.set(detail.videoId, detail.duration);
+      }
+    } catch (error) {
+      console.error("Failed to fetch video details:", error);
+    }
+
+    const enrichedVideos = allVideos.map((video) => ({
+      ...video,
+      duration: detailsMap.get(video.videoId) ?? video.duration,
+    }));
+
+    const withinRange: typeof enrichedVideos = [];
     const outOfRange: Array<{ channelId: string; videoId: string }> = [];
 
-    for (const video of allVideos) {
+    for (const video of enrichedVideos) {
       const seconds = parseDurationSeconds(video.duration);
       if (seconds >= getMinDuration() && seconds <= getMaxDuration()) {
         withinRange.push(video);

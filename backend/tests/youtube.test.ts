@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, spyOn } from "bun:test";
 import {
   getChannelVideos,
+  getVideoDetails,
   parseDurationSeconds,
   normalizeTimestamp,
 } from "../src/youtube/youtube.js";
@@ -299,6 +300,97 @@ describe("YouTube API", () => {
 
     it("should return empty string for invalid timestamps", () => {
       expect(normalizeTimestamp("not-a-date")).toBe("");
+    });
+  });
+
+  describe("getVideoDetails", () => {
+    it("should return empty array when no video IDs provided", async () => {
+      const results = await getVideoDetails("fake-key", []);
+      expect(results).toHaveLength(0);
+    });
+
+    it("should fetch durations from video details endpoint", async () => {
+      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
+        input: unknown,
+      ) => {
+        const url = typeof input === "string" ? input : (input as Request).url;
+
+        if (url.includes("/videos")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  {
+                    id: "vid1",
+                    contentDetails: { duration: "PT10M30S" },
+                  },
+                  {
+                    id: "vid2",
+                    contentDetails: { duration: "PT1H5M" },
+                  },
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }) as FetchMockFn);
+
+      try {
+        const results = await getVideoDetails("fake-key", ["vid1", "vid2"]);
+
+        expect(results).toHaveLength(2);
+        expect(results[0]?.videoId).toBe("vid1");
+        expect(results[0]?.duration).toBe("PT10M30S");
+        expect(results[1]?.videoId).toBe("vid2");
+        expect(results[1]?.duration).toBe("PT1H5M");
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+
+    it("should handle missing duration for a video", async () => {
+      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
+        input: unknown,
+      ) => {
+        const url = typeof input === "string" ? input : (input as Request).url;
+
+        if (url.includes("/videos")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  {
+                    id: "vid1",
+                    contentDetails: { duration: "PT10M30S" },
+                  },
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }) as FetchMockFn);
+
+      try {
+        const results = await getVideoDetails("fake-key", ["vid1", "vid2"]);
+
+        expect(results).toHaveLength(1);
+        expect(results[0]?.videoId).toBe("vid1");
+        expect(results[0]?.duration).toBe("PT10M30S");
+      } finally {
+        fetchMock.mockRestore();
+      }
     });
   });
 });
