@@ -198,64 +198,67 @@ export const apiRoutes = (db: Database): IRouter => {
     }
   });
 
-  router.post("/sync/channel/:channelId", async (req: Request, res: Response) => {
-    const channelId = getParamString(req.params, "channelId");
+  router.post(
+    "/sync/channel/:channelId",
+    async (req: Request, res: Response) => {
+      const channelId = getParamString(req.params, "channelId");
 
-    if (!channelId) {
-      res.status(400).json({ error: "Missing channelId" });
-      return;
-    }
-
-    const latestDate = getLatestVideoDateForChannel(db, channelId);
-    const videos = await getChannelVideos(getApiKey(), channelId, latestDate);
-
-    if (videos.length === 0) {
-      res.json({ synced: 0, ignored: 0 });
-      return;
-    }
-
-    const enrichedVideos = videos.map((video) => ({
-      ...video,
-      channelId,
-      duration: "",
-    }));
-
-    const videoIds = enrichedVideos.map((v) => v.videoId);
-    const detailsMap = new Map<string, string>();
-
-    try {
-      const videoDetails = await getVideoDetails(getApiKey(), videoIds);
-      for (const detail of videoDetails) {
-        detailsMap.set(detail.videoId, detail.duration);
+      if (!channelId) {
+        res.status(400).json({ error: "Missing channelId" });
+        return;
       }
-    } catch (error) {
-      console.error("Failed to fetch video details:", error);
-    }
 
-    const finalVideos = enrichedVideos.map((video) => ({
-      ...video,
-      duration: detailsMap.get(video.videoId) ?? video.duration,
-    }));
+      const latestDate = getLatestVideoDateForChannel(db, channelId);
+      const videos = await getChannelVideos(getApiKey(), channelId, latestDate);
 
-    const withinRange: typeof finalVideos = [];
-    const outOfRange: Array<{ channelId: string; videoId: string }> = [];
-
-    for (const video of finalVideos) {
-      const seconds = parseDurationSeconds(video.duration);
-      if (seconds >= getMinDuration() && seconds <= getMaxDuration()) {
-        withinRange.push(video);
-      } else {
-        outOfRange.push({
-          channelId: video.channelId,
-          videoId: video.videoId,
-        });
+      if (videos.length === 0) {
+        res.json({ synced: 0, ignored: 0 });
+        return;
       }
-    }
 
-    upsertVideos(db, withinRange);
-    bulkIgnoreVideos(db, outOfRange);
-    res.json({ synced: withinRange.length, ignored: outOfRange.length });
-  });
+      const enrichedVideos = videos.map((video) => ({
+        ...video,
+        channelId,
+        duration: "",
+      }));
+
+      const videoIds = enrichedVideos.map((v) => v.videoId);
+      const detailsMap = new Map<string, string>();
+
+      try {
+        const videoDetails = await getVideoDetails(getApiKey(), videoIds);
+        for (const detail of videoDetails) {
+          detailsMap.set(detail.videoId, detail.duration);
+        }
+      } catch (error) {
+        console.error("Failed to fetch video details:", error);
+      }
+
+      const finalVideos = enrichedVideos.map((video) => ({
+        ...video,
+        duration: detailsMap.get(video.videoId) ?? video.duration,
+      }));
+
+      const withinRange: typeof finalVideos = [];
+      const outOfRange: Array<{ channelId: string; videoId: string }> = [];
+
+      for (const video of finalVideos) {
+        const seconds = parseDurationSeconds(video.duration);
+        if (seconds >= getMinDuration() && seconds <= getMaxDuration()) {
+          withinRange.push(video);
+        } else {
+          outOfRange.push({
+            channelId: video.channelId,
+            videoId: video.videoId,
+          });
+        }
+      }
+
+      upsertVideos(db, withinRange);
+      bulkIgnoreVideos(db, outOfRange);
+      res.json({ synced: withinRange.length, ignored: outOfRange.length });
+    },
+  );
 
   router.post("/sync/videos", async (req: Request, res: Response) => {
     const userId = getUserId(req);

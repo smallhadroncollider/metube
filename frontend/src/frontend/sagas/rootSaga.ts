@@ -215,12 +215,13 @@ function* syncVideos(): Generator<CallEffect | PutEffect, void, SyncResponse> {
   }
 }
 
-function* syncChannelVideos(
-  action: { payload: string },
-): Generator<CallEffect | PutEffect, void, ChannelSyncResponse> {
+function* syncChannelVideos(action: {
+  payload: string;
+}): Generator<CallEffect | PutEffect, void, ChannelSyncResponse> {
   try {
     yield call(api.syncChannelVideos, action.payload);
     yield put(sagaSyncChannelVideosSucceeded());
+    yield put(sagaFetchVideosStarted());
   } catch (error) {
     const errorMessage = (error as Error).message;
     yield put(sagaSyncChannelVideosSucceeded());
@@ -277,9 +278,6 @@ function* subscribe(action: {
     yield put(sagaSubscribeSucceeded(response.subscription as never));
     yield put(sagaSearchChannelsSucceeded([]));
     yield put(sagaSyncChannelVideosRequested(action.payload.channelId));
-    yield call(api.syncChannelVideos, action.payload.channelId);
-    yield put(sagaSyncChannelVideosSucceeded());
-    yield put(sagaFetchVideosStarted());
   } catch (error) {
     const errorMessage = (error as Error).message;
     yield put(sagaFetchVideosFailed(errorMessage));
