@@ -43,3 +43,8 @@ export type SuccessResponse = {
 export type SubscriptionResponse = {
   subscription: Subscription;
 };
+
+export type ChannelSyncResponse = {
+  synced: number;
+  ignored: number;
+};

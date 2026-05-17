@@ -46,6 +46,12 @@ export const sagaSyncVideosRequested = createAction(
 export const sagaSyncVideosSucceeded = createAction(
   "saga/videos/syncSucceeded",
 );
+export const sagaSyncChannelVideosRequested = createAction<string>(
+  "saga/videos/syncChannelRequested",
+);
+export const sagaSyncChannelVideosSucceeded = createAction(
+  "saga/videos/syncChannelSucceeded",
+);
 
 const videosSlice = createSlice({
   name: "videos",
@@ -83,6 +89,12 @@ const videosSlice = createSlice({
         state.isSyncing = true;
       })
       .addCase(sagaSyncVideosSucceeded, (state) => {
+        state.isSyncing = false;
+      })
+      .addCase(sagaSyncChannelVideosRequested, (state) => {
+        state.isSyncing = true;
+      })
+      .addCase(sagaSyncChannelVideosSucceeded, (state) => {
         state.isSyncing = false;
       });
   },

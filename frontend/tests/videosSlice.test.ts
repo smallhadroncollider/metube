@@ -8,6 +8,8 @@ import {
   sagaAddVideoSucceeded,
   sagaAddVideoFailed,
   sagaIgnoreVideoSucceeded,
+  sagaSyncChannelVideosRequested,
+  sagaSyncChannelVideosSucceeded,
 } from "../src/frontend/slices/videosSlice.js";
 import type { Video } from "../src/frontend/types/index.js";
 
@@ -115,5 +117,20 @@ describe("Videos Slice", () => {
       videos: { error: string | null };
     };
     expect(state.videos.error).toBe("Failed to add");
+  });
+
+  it("should set syncing on channel sync requested", () => {
+    const store = configureStore({ reducer: { videos: videosReducer } });
+    store.dispatch(sagaSyncChannelVideosRequested("UC1"));
+    const state = store.getState() as { videos: { isSyncing: boolean } };
+    expect(state.videos.isSyncing).toBe(true);
+  });
+
+  it("should clear syncing on channel sync succeeded", () => {
+    const store = configureStore({ reducer: { videos: videosReducer } });
+    store.dispatch(sagaSyncChannelVideosRequested("UC1"));
+    store.dispatch(sagaSyncChannelVideosSucceeded());
+    const state = store.getState() as { videos: { isSyncing: boolean } };
+    expect(state.videos.isSyncing).toBe(false);
   });
 });

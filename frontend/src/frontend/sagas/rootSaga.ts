@@ -11,7 +11,6 @@ import {
   sagaDeviceAuthRequested,
   sagaDeviceAuthPolling,
   sagaDeviceAuthFailed,
-  sagaDeviceAuthExpired,
 } from "../slices/authSlice.js";
 import {
   sagaFetchVideosStarted,
@@ -24,6 +23,8 @@ import {
   sagaIgnoreVideoSucceeded,
   sagaSyncVideosRequested,
   sagaSyncVideosSucceeded,
+  sagaSyncChannelVideosRequested,
+  sagaSyncChannelVideosSucceeded,
 } from "../slices/videosSlice.js";
 import { addToast } from "../slices/toastsSlice.js";
 import {
@@ -46,6 +47,7 @@ import type {
   SearchResponse,
   SuccessResponse,
   SyncResponse,
+  ChannelSyncResponse,
 } from "../api/types.js";
 import type { User } from "../types/index.js";
 
@@ -213,6 +215,20 @@ function* syncVideos(): Generator<CallEffect | PutEffect, void, SyncResponse> {
   }
 }
 
+function* syncChannelVideos(
+  action: { payload: string },
+): Generator<CallEffect | PutEffect, void, ChannelSyncResponse> {
+  try {
+    yield call(api.syncChannelVideos, action.payload);
+    yield put(sagaSyncChannelVideosSucceeded());
+  } catch (error) {
+    const errorMessage = (error as Error).message;
+    yield put(sagaSyncChannelVideosSucceeded());
+    yield put(sagaFetchVideosFailed(errorMessage));
+    yield put(addToast({ message: errorMessage, type: "error" }));
+  }
+}
+
 function* fetchSubscriptions(): Generator<
   CallEffect | PutEffect,
   void,
@@ -260,6 +276,10 @@ function* subscribe(action: {
     );
     yield put(sagaSubscribeSucceeded(response.subscription as never));
     yield put(sagaSearchChannelsSucceeded([]));
+    yield put(sagaSyncChannelVideosRequested(action.payload.channelId));
+    yield call(api.syncChannelVideos, action.payload.channelId);
+    yield put(sagaSyncChannelVideosSucceeded());
+    yield put(sagaFetchVideosStarted());
   } catch (error) {
     const errorMessage = (error as Error).message;
     yield put(sagaFetchVideosFailed(errorMessage));
@@ -290,6 +310,7 @@ export default function* rootSaga(): Generator<unknown, void, unknown> {
     takeEvery(sagaAddVideoRequested, addVideo),
     takeEvery(sagaIgnoreVideoRequested, ignoreVideo),
     takeEvery(sagaSyncVideosRequested, syncVideos),
+    takeEvery(sagaSyncChannelVideosRequested, syncChannelVideos),
     takeEvery(sagaFetchSubscriptionsStarted, fetchSubscriptions),
     takeEvery(sagaSearchChannelsRequested, searchChannels),
     takeEvery(sagaSubscribeRequested, subscribe),

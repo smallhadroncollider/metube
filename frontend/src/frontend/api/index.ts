@@ -9,6 +9,7 @@ import type {
   SyncResponse,
   SuccessResponse,
   SubscriptionResponse,
+  ChannelSyncResponse,
 } from "./types.js";
 
 type ErrorResponse = {
@@ -111,6 +112,11 @@ export const searchChannels = (query: string): Promise<SearchResponse> =>
 
 export const syncVideos = (): Promise<SyncResponse> =>
   apiFetch("/sync/videos", { method: "POST" });
+
+export const syncChannelVideos = (
+  channelId: string,
+): Promise<ChannelSyncResponse> =>
+  apiFetch(`/sync/channel/${channelId}`, { method: "POST" });
 
 export const getUser = (): Promise<{ user: User; playlistId: string }> =>
   apiFetch("/user");
