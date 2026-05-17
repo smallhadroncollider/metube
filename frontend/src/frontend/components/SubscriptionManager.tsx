@@ -1,5 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import type { Subscription, ApiChannel } from "../types/index.js";
+import Avatar from "./Avatar.js";
 import styles from "./SubscriptionManager.module.scss";
 
 type SubscriptionManagerProps = {
@@ -12,47 +13,6 @@ type SubscriptionManagerProps = {
     channelThumbnail: string,
   ) => void;
   onUnsubscribe: (channelId: string) => void;
-};
-
-const erroredImages = new Set<string>();
-
-const ChannelAvatar = ({
-  src,
-  alt,
-  className,
-  delay = 0,
-}: {
-  src: string;
-  alt: string;
-  className: string | undefined;
-  delay?: number;
-}) => {
-  const [isErrored, setIsErrored] = useState(() => erroredImages.has(src));
-  const [revealed, setRevealed] = useState(delay === 0);
-
-  useEffect(() => {
-    if (delay === 0) return;
-    const timer = setTimeout(() => setRevealed(true), delay);
-    return () => clearTimeout(timer);
-  }, [delay]);
-
-  if (isErrored || !revealed) {
-    return (
-      <div className={styles.fallbackAvatar}>{alt.charAt(0).toUpperCase()}</div>
-    );
-  }
-
-  return (
-    <img
-      src={src}
-      alt={alt}
-      className={className}
-      onError={() => {
-        erroredImages.add(src);
-        setIsErrored(true);
-      }}
-    />
-  );
 };
 
 const SubscriptionManager = ({
@@ -99,7 +59,7 @@ const SubscriptionManager = ({
           <h3>Search Results</h3>
           {searchResults.map((channel, index) => (
             <div key={channel.channelId} className={styles.channel}>
-              <ChannelAvatar
+              <Avatar
                 src={channel.thumbnail}
                 alt={channel.title}
                 className={styles.channelThumb}
@@ -131,7 +91,7 @@ const SubscriptionManager = ({
         <h3>Subscribed ({subscriptions.length})</h3>
         {subscriptions.map((sub, index) => (
           <div key={sub.channel_id} className={styles.channel}>
-            <ChannelAvatar
+            <Avatar
               src={sub.channel_thumbnail}
               alt={sub.channel_title}
               className={styles.channelThumb}

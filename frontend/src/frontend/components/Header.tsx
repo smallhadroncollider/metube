@@ -1,3 +1,4 @@
+import Avatar from "./Avatar.js";
 import styles from "./Header.module.scss";
 
 type HeaderProps = {
@@ -29,7 +30,12 @@ const Header = ({
           </button>
           {isAuthenticated && (
             <div className={styles.user}>
-              <img src={userPicture} alt={userName} className={styles.avatar} />
+              <Avatar
+                src={userPicture}
+                alt={userName}
+                className={styles.avatar}
+                size={32}
+              />
               <span className={styles.userName}>{userName}</span>
               <button className={styles.logout} onClick={onLogout}>
                 Logout
