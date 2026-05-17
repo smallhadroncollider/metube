@@ -51,7 +51,9 @@ const SubscriptionManager = ({
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
         />
-        <button onClick={handleSearch}>Search</button>
+        <button onClick={handleSearch} title="Search">
+          🔍
+        </button>
       </div>
 
       {searchResults.length > 0 && (
@@ -67,7 +69,15 @@ const SubscriptionManager = ({
               />
               <span className={styles.channelName}>{channel.title}</span>
               {isSubscribed(channel.channelId) ? (
-                <span className={styles.subscribed}>✓</span>
+                <button
+                  className={styles.unsubscribeBtn}
+                  onClick={() =>
+                    onUnsubscribe(channel.channelId)
+                  }
+                  title="Unsubscribe"
+                >
+                  ×
+                </button>
               ) : (
                 <button
                   className={styles.subscribeBtn}
@@ -104,7 +114,7 @@ const SubscriptionManager = ({
               onClick={() => onUnsubscribe(sub.channel_id)}
               title="Unsubscribe"
             >
-              −
+              ×
             </button>
           </div>
         ))}

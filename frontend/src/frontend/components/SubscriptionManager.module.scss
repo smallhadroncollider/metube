@@ -29,6 +29,7 @@
 
   input {
     flex: 1;
+    min-width: 0;
     font-size: 12px;
     padding: 6px 8px;
   }
@@ -37,7 +38,9 @@
     background: #6366f1;
     color: white;
     padding: 6px 8px;
-    font-size: 12px;
+    font-size: 14px;
+    line-height: 1;
+    flex-shrink: 0;
 
     &:hover {
       background: #4f46e5;
@@ -134,9 +137,4 @@
   &:hover {
     background: rgba(239, 68, 68, 0.2);
   }
-}
-
-.subscribed {
-  font-size: 12px;
-  color: #22c55e;
 }
