@@ -103,7 +103,7 @@ export const addSubscription = (
   }
 };
 
-export const getSubscriptionByUserIdAndChannelId = (
+const getSubscriptionByUserIdAndChannelId = (
   db: Database,
   userId: number,
   channelId: string,
@@ -144,7 +144,7 @@ type ChannelVideo = {
   publishedAt: string;
 };
 
-export const normalizeTimestamp = (timestamp: string): string => {
+const normalizeTimestamp = (timestamp: string): string => {
   if (timestamp.endsWith("Z")) {
     return timestamp;
   }
@@ -157,7 +157,7 @@ export const normalizeTimestamp = (timestamp: string): string => {
   return date.toISOString();
 };
 
-export const isTimestampValid = (timestamp: string): boolean => {
+const isTimestampValid = (timestamp: string): boolean => {
   if (!timestamp.length) {
     return false;
   }
@@ -220,7 +220,7 @@ export const getVideoById = (
     .query("SELECT * FROM videos WHERE video_id = ? AND channel_id = ?")
     .get(videoId, channelId) as Video | null;
 
-export const getDiscoveredChannelIds = (db: Database): string[] =>
+const getDiscoveredChannelIds = (db: Database): string[] =>
   (
     db.query("SELECT DISTINCT channel_id FROM videos").all() as Array<{
       channel_id: string;

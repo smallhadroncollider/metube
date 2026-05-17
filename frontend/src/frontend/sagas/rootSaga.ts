@@ -46,10 +46,11 @@ import type {
   SubscriptionsResponse,
   SearchResponse,
   SuccessResponse,
+  SubscriptionResponse,
   SyncResponse,
   ChannelSyncResponse,
 } from "../api/types.js";
-import type { User } from "../types/index.js";
+import type { User, Subscription } from "../types/index.js";
 
 function* checkAuth(): Generator<CallEffect | PutEffect, void, never> {
   try {
@@ -71,13 +72,15 @@ function* checkAuth(): Generator<CallEffect | PutEffect, void, never> {
   }
 }
 
-function* requestDeviceAuth(_action: {
-  payload: void;
-}): Generator<CallEffect | PutEffect, void, DeviceAuthResponse> {
+function* requestDeviceAuth(): Generator<
+  CallEffect | PutEffect,
+  void,
+  DeviceAuthResponse
+> {
   try {
     const deviceAuth = (yield call(
       api.requestDeviceAuth,
-    )) as unknown as DeviceAuthResponse;
+    )) as DeviceAuthResponse;
     yield put(
       sagaDeviceAuthRequested({
         userCode: deviceAuth.user_code,
@@ -92,6 +95,9 @@ function* requestDeviceAuth(_action: {
   }
 }
 
+const getWaitTime = (pollResponse: DevicePollResponse, interval: number): number =>
+  pollResponse.status === "slow_down" ? 2000 : interval * 1000;
+
 function* pollDeviceToken(action: {
   payload: { deviceCode: string; interval: number; expiresIn: number };
 }): Generator<CallEffect | PutEffect, void, unknown> {
@@ -101,19 +107,17 @@ function* pollDeviceToken(action: {
     const pollResponse = (yield call(
       api.pollDeviceToken,
       deviceCode,
-    )) as unknown as DevicePollResponse;
+    )) as DevicePollResponse;
 
     if (pollResponse.status === "complete") {
-      const userResponse = (yield call(api.getUser)) as unknown as {
+      const userResponse = (yield call(api.getUser)) as {
         user: User;
         playlistId: string;
       };
       yield put(sagaCheckAuthSucceeded(userResponse.user));
       yield put(sagaFetchVideosStarted());
       yield put(sagaFetchSubscriptionsStarted());
-      yield put(
-        addToast({ message: "Signed in successfully", type: "success" }),
-      );
+      yield put(addToast({ message: "Signed in successfully", type: "success" }));
       break;
     }
 
@@ -137,15 +141,11 @@ function* pollDeviceToken(action: {
       }),
     );
 
-    const waitTime =
-      pollResponse.status === "slow_down" ? 2000 : interval * 1000;
-    yield delay(waitTime);
+    yield delay(getWaitTime(pollResponse, interval));
   }
 }
 
-function* logout(_action: {
-  payload: void;
-}): Generator<CallEffect | PutEffect, void, SuccessResponse> {
+function* logout(): Generator<CallEffect | PutEffect, void, SuccessResponse> {
   try {
     yield call(api.logout);
     yield put(sagaLogoutSucceeded());
@@ -269,13 +269,13 @@ function* subscribe(action: {
   };
 }): Generator<CallEffect | PutEffect, void, { subscription: unknown }> {
   try {
-    const response: { subscription: unknown } = yield call(
+    const response = (yield call(
       api.addSubscription,
       action.payload.channelId,
       action.payload.channelTitle,
       action.payload.channelThumbnail,
-    );
-    yield put(sagaSubscribeSucceeded(response.subscription as never));
+    )) as SubscriptionResponse;
+    yield put(sagaSubscribeSucceeded(response.subscription as Subscription));
     yield put(sagaSearchChannelsSucceeded([]));
     yield put(sagaSyncChannelVideosRequested(action.payload.channelId));
   } catch (error) {
@@ -285,12 +285,12 @@ function* subscribe(action: {
   }
 }
 
-function* unsubscribe(_action: {
+function* unsubscribe(action: {
   payload: string;
 }): Generator<CallEffect | PutEffect, void, SuccessResponse> {
   try {
-    yield call(api.removeSubscription, _action.payload as string);
-    yield put(sagaUnsubscribeSucceeded(_action.payload as string));
+    yield call(api.removeSubscription, action.payload);
+    yield put(sagaUnsubscribeSucceeded(action.payload));
   } catch (error) {
     const errorMessage = (error as Error).message;
     yield put(sagaFetchVideosFailed(errorMessage));

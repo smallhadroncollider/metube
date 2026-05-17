@@ -1,4 +1,3 @@
-import type { User } from "../types/index.js";
 import type {
   AuthStatus,
   DeviceAuthResponse,
@@ -35,6 +34,8 @@ const fetchWithPrefix = async <T>(
 
   return data as T;
 };
+
+import type { User } from "../types/index.js";
 
 const apiFetch = <T>(path: string, options?: RequestInit): Promise<T> =>
   fetchWithPrefix("/api", path, options);

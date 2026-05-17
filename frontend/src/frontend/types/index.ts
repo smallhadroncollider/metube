@@ -5,12 +5,6 @@ export type User = {
   picture: string;
 };
 
-export type Channel = {
-  channelId: string;
-  title: string;
-  thumbnail: string;
-};
-
 export type Video = {
   id: number;
   channel_id: string;
@@ -33,28 +27,10 @@ export type Subscription = {
   subscribed_at: string;
 };
 
-export type ApiVideo = {
-  videoId: string;
-  title: string;
-  description: string;
-  thumbnail: string;
-  duration: string;
-  publishedAt: string;
-};
-
 export type ApiChannel = {
   channelId: string;
   title: string;
   thumbnail: string;
 };
 
-export type AppState = {
-  isAuthenticated: boolean;
-  user: User | null;
-  videos: Video[];
-  subscriptions: Subscription[];
-  searchResults: ApiChannel[];
-  isLoading: boolean;
-  error: string | null;
-  darkMode: boolean;
-};
+

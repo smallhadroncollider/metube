@@ -27,13 +27,6 @@ type VideoItem = {
   };
 };
 
-type PlaylistVideoResult = {
-  videoId: string;
-  title: string;
-  description: string;
-  thumbnail: string;
-};
-
 type SearchItem = {
   id: { channelId?: string; videoId?: string };
   snippet: {
@@ -65,14 +58,6 @@ type PlaylistItem = {
   };
 };
 
-type SubscriptionItem = {
-  snippet: {
-    title: string;
-    resourceId: { channelId: string };
-    thumbnails: { default: { url: string } };
-  };
-};
-
 type ApiListResponse<T> = {
   items?: T[];
   nextPageToken?: string;
@@ -97,38 +82,6 @@ const fetchApi = async <T>(
       `YouTube API error: ${response.status} ${response.statusText} - ${body}`,
     );
   }
-  return response.json() as Promise<T>;
-};
-
-const ensureAccessToken = async (oauth2Client: OAuth2Client): Promise<void> => {
-  const expiryDate = oauth2Client.credentials.expiry_date ?? 0;
-  if (expiryDate <= Date.now() + 60_000) {
-    await oauth2Client.refreshAccessToken();
-  }
-};
-
-export const refreshAccessToken = async (
-  oauth2Client: OAuth2Client,
-): Promise<void> => {
-  await ensureAccessToken(oauth2Client);
-};
-
-const fetchOAuth = async <T>(
-  path: string,
-  params: Record<string, string>,
-  oauth2Client: OAuth2Client,
-): Promise<T> => {
-  await ensureAccessToken(oauth2Client);
-  const url = new URL(`${baseUrl}${path}`);
-  for (const [key, value] of Object.entries(params)) {
-    url.searchParams.append(key, value);
-  }
-  const accessToken = oauth2Client.credentials.access_token;
-  const response = await fetch(url.toString(), {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
-  });
   return response.json() as Promise<T>;
 };
 
@@ -180,6 +133,34 @@ const channelIdToUploadsPlaylistId = (channelId: string): string => {
   return channelId;
 };
 
+const processPlaylistItem = (
+  item: PlaylistItem,
+  publishedAfter: string | null,
+): VideoResult | null => {
+  const publishedAt = normalizeTimestamp(item.snippet.publishedAt);
+
+  if (publishedAfter && publishedAt <= publishedAfter) {
+    return null;
+  }
+
+  const videoId = item.contentDetails.videoId;
+  if (!videoId || !item.snippet.title || !publishedAt) {
+    return null;
+  }
+
+  return {
+    videoId,
+    title: item.snippet.title,
+    description: item.snippet.description,
+    thumbnail:
+      item.snippet.thumbnails.high?.url ??
+      item.snippet.thumbnails.default?.url ??
+      "",
+    duration: "",
+    publishedAt,
+  };
+};
+
 export const getChannelVideos = async (
   apiKey: string,
   channelId: string,
@@ -188,7 +169,6 @@ export const getChannelVideos = async (
   const playlistId = channelIdToUploadsPlaylistId(channelId);
   const results: VideoResult[] = [];
   let nextPageToken: string | undefined;
-
   let stopped = false;
 
   do {
@@ -210,42 +190,30 @@ export const getChannelVideos = async (
     const items = response.items ?? [];
 
     for (const item of items) {
-      const publishedAt = normalizeTimestamp(item.snippet.publishedAt);
+      const processed = processPlaylistItem(item, publishedAfter);
 
-      if (publishedAfter && publishedAt <= publishedAfter) {
-        stopped = true;
-        break;
-      }
-
-      const videoId = item.contentDetails.videoId;
-      if (!videoId || !item.snippet.title || !publishedAt) {
+      if (!processed) {
+        const publishedAt = normalizeTimestamp(item.snippet.publishedAt);
+        if (publishedAfter && publishedAt <= publishedAfter) {
+          stopped = true;
+        }
         continue;
       }
 
-      results.push({
-        videoId,
-        title: item.snippet.title,
-        description: item.snippet.description,
-        thumbnail:
-          item.snippet.thumbnails.high?.url ??
-          item.snippet.thumbnails.default?.url ??
-          "",
-        duration: "",
-        publishedAt,
-      });
+      results.push(processed);
     }
 
     nextPageToken = response.nextPageToken;
-  } while (nextPageToken && !stopped && (!publishedAfter || nextPageToken));
+  } while (nextPageToken && !stopped);
 
-  if (results.length === 0) {
-    return [];
+  return results;
+};
+
+const ensureAccessToken = async (oauth2Client: OAuth2Client): Promise<void> => {
+  const expiryDate = oauth2Client.credentials.expiry_date ?? 0;
+  if (expiryDate <= Date.now() + 60_000) {
+    await oauth2Client.refreshAccessToken();
   }
-
-  return results.map((video) => ({
-    ...video,
-    duration: "",
-  }));
 };
 
 export const parseDurationSeconds = (isoDuration: string): number => {
@@ -288,26 +256,31 @@ export const addToPlaylist = async (
     }),
   });
 
-  if (response.ok) {
-    return { ok: true };
-  }
-
-  if (response.status === 409) {
+  if (response.ok || response.status === 409) {
     return { ok: true };
   }
 
   const body = (await response.json()) as Record<string, unknown>;
-  const rawMessage =
-    typeof body?.["error"] === "object" &&
-    body?.["error"] !== null &&
-    typeof (body["error"] as Record<string, unknown>)?.["message"] === "string"
-      ? (body["error"] as Record<string, string>)["message"]
-      : `YouTube API error: ${response.status} ${response.statusText}`;
+  return { ok: false, error: parseErrorFromResponse(response, body) };
+};
 
-  return {
-    ok: false,
-    error: rawMessage ?? `YouTube API error: ${response.status}`,
-  };
+const parseErrorFromResponse = (
+  response: Response,
+  body: Record<string, unknown>,
+): string => {
+  const errorObj = body["error"];
+
+  if (
+    typeof errorObj === "object" &&
+    errorObj !== null &&
+    typeof (errorObj as Record<string, unknown>)["message"] === "string"
+  ) {
+    return (
+      errorObj as Record<string, string>
+    )["message"] ?? `YouTube API error: ${response.status}`;
+  }
+
+  return `YouTube API error: ${response.status} ${response.statusText}`;
 };
 
 export const getVideoDetails = async (
@@ -334,64 +307,15 @@ export const getVideoDetails = async (
     );
 
     const items = response.items ?? [];
-    for (const item of items) {
-      results.push({
-        videoId: item.id,
-        duration: item.contentDetails.duration,
-      });
-    }
+    results.push(...processVideoBatch(items));
   }
 
   return results;
 };
 
-export const getSubscribedChannels = async (
-  oauth2Client: OAuth2Client,
-): Promise<ChannelResult[]> => {
-  const response = await fetchOAuth<ApiListResponse<SubscriptionItem>>(
-    "/subscriptions",
-    {
-      part: "snippet",
-      mine: "true",
-      maxResults: "50",
-    },
-    oauth2Client,
-  );
-
-  const items = response.items ?? [];
-  return items
-    .map((item) => ({
-      channelId: item.snippet.resourceId.channelId,
-      title: item.snippet.title,
-      thumbnail: item.snippet.thumbnails.default.url,
-    }))
-    .filter((channel) => channel.channelId !== "" && channel.title !== "");
-};
-
-export const getPlaylistVideos = async (
-  apiKey: string,
-  playlistId: string,
-): Promise<PlaylistVideoResult[]> => {
-  const response = await fetchApi<ApiListResponse<PlaylistItem>>(
-    "/playlistItems",
-    {
-      part: "snippet",
-      playlistId,
-      maxResults: "50",
-    },
-    apiKey,
-  );
-
-  const items = response.items ?? [];
-  return items
-    .map((item) => ({
-      videoId: item.contentDetails.videoId,
-      title: item.snippet.title,
-      description: item.snippet.description,
-      thumbnail:
-        item.snippet.thumbnails.high?.url ??
-        item.snippet.thumbnails.default?.url ??
-        "",
-    }))
-    .filter((video) => video.videoId !== "" && video.title !== "");
+const processVideoBatch = (items: VideoItem[]): VideoDetailsResult[] => {
+  return items.map((item) => ({
+    videoId: item.id,
+    duration: item.contentDetails.duration,
+  }));
 };

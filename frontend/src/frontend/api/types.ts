@@ -1,4 +1,4 @@
-import type { User, Video, Subscription, ApiChannel } from "../types/index.js";
+import type { Video, Subscription, ApiChannel } from "../types/index.js";
 
 export type AuthStatus = {
   authenticated: boolean;

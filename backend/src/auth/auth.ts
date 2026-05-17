@@ -7,31 +7,6 @@ const scopes = [
   "https://www.googleapis.com/auth/userinfo.email",
 ].join(" ");
 
-export const createOAuth2Client = (
-  clientId: string,
-  clientSecret: string,
-  redirectUri: string,
-): OAuth2Client => new google.auth.OAuth2(clientId, clientSecret, redirectUri);
-
-export const getOAuth2Url = (
-  oauth2Client: OAuth2Client,
-  state: string,
-): string =>
-  oauth2Client.generateAuthUrl({
-    access_type: "offline",
-    scope: scopes,
-    state,
-  });
-
-export const getTokens = async (
-  oauth2Client: OAuth2Client,
-  code: string,
-): Promise<OAuth2Client> => {
-  const { tokens } = await oauth2Client.getToken(code);
-  oauth2Client.setCredentials(tokens);
-  return oauth2Client;
-};
-
 export type OAuthTokens = {
   access_token: string;
   refresh_token: string;
@@ -44,18 +19,13 @@ export const createOAuth2ClientFromTokens = (
   redirectUri: string,
   tokens: OAuthTokens,
 ): OAuth2Client => {
-  const oauth2Client = createOAuth2Client(clientId, clientSecret, redirectUri);
+  const oauth2Client = new google.auth.OAuth2(
+    clientId,
+    clientSecret,
+    redirectUri,
+  );
   oauth2Client.setCredentials(tokens);
   return oauth2Client;
-};
-
-export const refreshAccessToken = async (
-  oauth2Client: OAuth2Client,
-): Promise<void> => {
-  const expiryDate = oauth2Client.credentials.expiry_date ?? 0;
-  if (expiryDate <= Date.now() + 60_000) {
-    await oauth2Client.refreshAccessToken();
-  }
 };
 
 export const getUserInfo = async (
@@ -66,7 +36,10 @@ export const getUserInfo = async (
   name: string;
   picture: string;
 }> => {
-  await refreshAccessToken(oauth2Client);
+  const expiryDate = oauth2Client.credentials.expiry_date ?? 0;
+  if (expiryDate <= Date.now() + 60_000) {
+    await oauth2Client.refreshAccessToken();
+  }
   const accessToken = oauth2Client.credentials.access_token;
   const response = await fetch(
     "https://www.googleapis.com/oauth2/v2/userinfo",

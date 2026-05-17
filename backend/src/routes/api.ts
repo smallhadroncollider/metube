@@ -23,7 +23,7 @@ import {
 } from "../db/repo.js";
 import { createOAuth2ClientFromTokens } from "../auth/auth.js";
 
-const requireAuth = (req: Request, res: Response, next: () => void) => {
+const requireAuth = (req: Request, res: Response, next: () => void): void => {
   if (!req.session.userId) {
     res.status(401).json({ error: "Not authenticated" });
     return;
@@ -79,6 +79,51 @@ const getUserId = (req: Request): number => {
     throw new Error("User not authenticated");
   }
   return req.session.userId;
+};
+
+const enrichVideosWithDetails = async (
+  apiKey: string,
+  videos: Array<{ videoId: string; channelId: string }>,
+): Promise<Map<string, string>> => {
+  const videoIds = videos.map((v) => v.videoId);
+  const detailsMap = new Map<string, string>();
+
+  try {
+    const videoDetails = await getVideoDetails(apiKey, videoIds);
+    for (const detail of videoDetails) {
+      detailsMap.set(detail.videoId, detail.duration);
+    }
+  } catch (error) {
+    console.error("Failed to fetch video details:", error);
+  }
+
+  return detailsMap;
+};
+
+const categorizeVideos = <
+  T extends { channelId: string; videoId: string; duration: string },
+>(
+  videos: T[],
+): {
+  withinRange: T[];
+  outOfRange: Array<{ channelId: string; videoId: string }>;
+} => {
+  const withinRange: T[] = [];
+  const outOfRange: Array<{ channelId: string; videoId: string }> = [];
+
+  for (const video of videos) {
+    const seconds = parseDurationSeconds(video.duration);
+    if (seconds >= getMinDuration() && seconds <= getMaxDuration()) {
+      withinRange.push(video);
+    } else {
+      outOfRange.push({
+        channelId: video.channelId,
+        videoId: video.videoId,
+      });
+    }
+  }
+
+  return { withinRange, outOfRange };
 };
 
 export const apiRoutes = (db: Database): IRouter => {
@@ -222,38 +267,13 @@ export const apiRoutes = (db: Database): IRouter => {
         duration: "",
       }));
 
-      const videoIds = enrichedVideos.map((v) => v.videoId);
-      const detailsMap = new Map<string, string>();
-
-      try {
-        const videoDetails = await getVideoDetails(getApiKey(), videoIds);
-        for (const detail of videoDetails) {
-          detailsMap.set(detail.videoId, detail.duration);
-        }
-      } catch (error) {
-        console.error("Failed to fetch video details:", error);
-      }
-
+      const detailsMap = await enrichVideosWithDetails(getApiKey(), enrichedVideos);
       const finalVideos = enrichedVideos.map((video) => ({
         ...video,
         duration: detailsMap.get(video.videoId) ?? video.duration,
       }));
 
-      const withinRange: typeof finalVideos = [];
-      const outOfRange: Array<{ channelId: string; videoId: string }> = [];
-
-      for (const video of finalVideos) {
-        const seconds = parseDurationSeconds(video.duration);
-        if (seconds >= getMinDuration() && seconds <= getMaxDuration()) {
-          withinRange.push(video);
-        } else {
-          outOfRange.push({
-            channelId: video.channelId,
-            videoId: video.videoId,
-          });
-        }
-      }
-
+      const { withinRange, outOfRange } = categorizeVideos(finalVideos);
       upsertVideos(db, withinRange);
       bulkIgnoreVideos(db, outOfRange);
       res.json({ synced: withinRange.length, ignored: outOfRange.length });
@@ -303,38 +323,13 @@ export const apiRoutes = (db: Database): IRouter => {
       return;
     }
 
-    const videoIds = allVideos.map((video) => video.videoId);
-    const detailsMap = new Map<string, string>();
-
-    try {
-      const videoDetails = await getVideoDetails(getApiKey(), videoIds);
-      for (const detail of videoDetails) {
-        detailsMap.set(detail.videoId, detail.duration);
-      }
-    } catch (error) {
-      console.error("Failed to fetch video details:", error);
-    }
-
+    const detailsMap = await enrichVideosWithDetails(getApiKey(), allVideos);
     const enrichedVideos = allVideos.map((video) => ({
       ...video,
       duration: detailsMap.get(video.videoId) ?? video.duration,
     }));
 
-    const withinRange: typeof enrichedVideos = [];
-    const outOfRange: Array<{ channelId: string; videoId: string }> = [];
-
-    for (const video of enrichedVideos) {
-      const seconds = parseDurationSeconds(video.duration);
-      if (seconds >= getMinDuration() && seconds <= getMaxDuration()) {
-        withinRange.push(video);
-      } else {
-        outOfRange.push({
-          channelId: video.channelId,
-          videoId: video.videoId,
-        });
-      }
-    }
-
+    const { withinRange, outOfRange } = categorizeVideos(enrichedVideos);
     upsertVideos(db, withinRange);
     bulkIgnoreVideos(db, outOfRange);
     res.json({ synced: withinRange.length, ignored: outOfRange.length });

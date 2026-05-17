@@ -48,10 +48,6 @@ export const sagaDeviceAuthPolling = createAction<{
 
 export const sagaDeviceAuthFailed = createAction("saga/auth/deviceAuthFailed");
 
-export const sagaDeviceAuthExpired = createAction(
-  "saga/auth/deviceAuthExpired",
-);
-
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -97,12 +93,6 @@ const authSlice = createSlice({
         state.devicePolling = action.payload.status !== "slow_down";
       })
       .addCase(sagaDeviceAuthFailed, (state) => {
-        state.devicePolling = false;
-        state.deviceUserCode = null;
-        state.deviceVerificationUrl = null;
-        state.deviceAuthExpiresIn = 0;
-      })
-      .addCase(sagaDeviceAuthExpired, (state) => {
         state.devicePolling = false;
         state.deviceUserCode = null;
         state.deviceVerificationUrl = null;
