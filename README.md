@@ -11,7 +11,6 @@ Curate a single YouTube playlist for your child to watch. Search for channels, s
 - **Add/Ignore** - Add videos to your YouTube playlist or ignore them
 - **Duration Filters** - Auto-ignore videos outside MIN_DURATION / MAX_DURATION on sync
 - **Error Handling** - Toast notifications when adding to playlist fails, videos remain pending
-- **Swipe Gestures** - Swipe left to ignore, swipe right to add
 - **Dark Mode** - Toggle between light and dark themes
 - **Sync Subscriptions** - Sync your YouTube account subscriptions
 
@@ -158,5 +157,5 @@ bun run test:frontend
 2. Sign in with Google
 3. Search for channels and subscribe
 4. Click "Sync Channels" to fetch new videos
-5. Add or ignore videos using buttons or swipe gestures
+5. Add or ignore videos using the Add or Ignore buttons
 6. Click "Sync Subscriptions" to import your YouTube subscriptions

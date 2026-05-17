@@ -1,4 +1,3 @@
-import { useState, useRef, useCallback } from "react";
 import type { Video } from "../types/index.js";
 import styles from "./VideoCard.module.scss";
 
@@ -22,42 +21,6 @@ const formatDuration = (isoDuration: string): string => {
 };
 
 const VideoCard = ({ video, onAdd, onIgnore }: VideoCardProps) => {
-  const [isDragging, setIsDragging] = useState(false);
-  const [dragOffset, setDragOffset] = useState(0);
-  const cardRef = useRef<HTMLDivElement>(null);
-  const startRef = useRef<{ x: number; offset: number } | null>(null);
-
-  const handlePointerDown = useCallback(
-    (e: React.PointerEvent) => {
-      startRef.current = { x: e.clientX, offset: dragOffset };
-      setIsDragging(true);
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    },
-    [dragOffset],
-  );
-
-  const handlePointerMove = useCallback(
-    (e: React.PointerEvent) => {
-      if (!startRef.current || !isDragging) return;
-      const dx = e.clientX - startRef.current.x;
-      setDragOffset(
-        Math.max(-100, Math.min(100, startRef.current.offset + dx)),
-      );
-    },
-    [isDragging],
-  );
-
-  const handlePointerUp = useCallback(() => {
-    if (dragOffset > 50) {
-      onAdd();
-    } else if (dragOffset < -50) {
-      onIgnore();
-    }
-    setDragOffset(0);
-    setIsDragging(false);
-    startRef.current = null;
-  }, [dragOffset, onAdd, onIgnore]);
-
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
@@ -76,21 +39,7 @@ const VideoCard = ({ video, onAdd, onIgnore }: VideoCardProps) => {
       : video.description;
 
   return (
-    <div
-      ref={cardRef}
-      className={styles.card}
-      style={{
-        transform: `translateX(${dragOffset}px)`,
-        opacity: isDragging ? 0.8 : 1,
-      }}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-    >
-      <div className={styles.background}>
-        <div className={styles.addBg}>ADD</div>
-        <div className={styles.ignoreBg}>IGNORE</div>
-      </div>
+    <div className={styles.card}>
       <div className={styles.content}>
         <div className={styles.thumbnailWrapper}>
           <img

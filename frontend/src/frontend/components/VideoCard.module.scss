@@ -2,30 +2,6 @@
   position: relative;
   border-radius: 12px;
   overflow: hidden;
-  transition:
-    transform 0.2s,
-    opacity 0.2s;
-  touch-action: none;
-  cursor: grab;
-
-  &:active {
-    cursor: grabbing;
-  }
-}
-
-.background {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 0;
-  pointer-events: none;
-}
-
-.addBg,
-.ignoreBg {
-  display: none;
 }
 
 .content {
