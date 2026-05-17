@@ -18,14 +18,9 @@ import {
   updateUserPlaylist,
   getLatestVideoDateForChannel,
   bulkIgnoreVideos,
+  getUserTokens,
 } from "../db/repo.js";
-
-declare module "express-session" {
-  interface SessionData {
-    userId: number;
-    oauth2Client?: OAuth2Client;
-  }
-}
+import { createOAuth2ClientFromTokens } from "../auth/auth.js";
 
 const requireAuth = (req: Request, res: Response, next: () => void) => {
   if (!req.session.userId) {
@@ -33,6 +28,27 @@ const requireAuth = (req: Request, res: Response, next: () => void) => {
     return;
   }
   next();
+};
+
+const buildOAuth2Client = (
+  userId: number,
+  db: Database,
+): OAuth2Client | null => {
+  const storedTokens = getUserTokens(db, userId);
+  if (!storedTokens || !storedTokens.refreshToken) {
+    return null;
+  }
+  return createOAuth2ClientFromTokens(
+    process.env.GOOGLE_CLIENT_ID ?? "",
+    process.env.GOOGLE_CLIENT_SECRET ?? "",
+    process.env.GOOGLE_REDIRECT_URI ??
+      "http://localhost:3000/auth/google/callback",
+    {
+      access_token: storedTokens.accessToken,
+      refresh_token: storedTokens.refreshToken,
+      expiry_date: storedTokens.expiryDate,
+    },
+  );
 };
 
 const getApiKey = (): string => process.env.YOUTUBE_API_KEY ?? "";
@@ -90,9 +106,10 @@ export const apiRoutes = (db: Database): IRouter => {
       return;
     }
 
-    if (req.session.oauth2Client) {
+    const oauth2Client = buildOAuth2Client(userId, db);
+    if (oauth2Client) {
       const result = await addToPlaylist(
-        req.session.oauth2Client,
+        oauth2Client,
         user.youtube_playlist_id,
         videoId,
       );
@@ -194,21 +211,28 @@ export const apiRoutes = (db: Database): IRouter => {
     }> = [];
 
     for (const subscription of subscriptions) {
-      const latestDate = getLatestVideoDateForChannel(
-        db,
-        subscription.channel_id,
-      );
-      const videos = await getChannelVideos(
-        getApiKey(),
-        subscription.channel_id,
-        latestDate,
-      );
-      allVideos.push(
-        ...videos.map((video) => ({
-          ...video,
-          channelId: subscription.channel_id,
-        })),
-      );
+      try {
+        const latestDate = getLatestVideoDateForChannel(
+          db,
+          subscription.channel_id,
+        );
+        const videos = await getChannelVideos(
+          getApiKey(),
+          subscription.channel_id,
+          latestDate,
+        );
+        allVideos.push(
+          ...videos.map((video) => ({
+            ...video,
+            channelId: subscription.channel_id,
+          })),
+        );
+      } catch (error) {
+        console.error(
+          `Failed to fetch videos for ${subscription.channel_id}:`,
+          error,
+        );
+      }
     }
 
     const withinRange: typeof allVideos = [];

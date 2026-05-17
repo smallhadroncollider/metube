@@ -53,13 +53,6 @@ type PlaylistItem = {
   };
 };
 
-type VideoContentItem = {
-  id: string;
-  contentDetails: {
-    duration: string;
-  };
-};
-
 type SubscriptionItem = {
   snippet: {
     title: string;
@@ -77,12 +70,12 @@ const baseUrl = "https://www.googleapis.com/youtube/v3";
 
 const fetchApi = async <T>(
   path: string,
-  params: Record<string, string | boolean>,
+  params: Record<string, string>,
   apiKey: string,
 ): Promise<T> => {
   const url = new URL(`${baseUrl}${path}`);
   for (const [key, value] of Object.entries(params)) {
-    url.searchParams.append(key, String(value));
+    url.searchParams.append(key, value);
   }
   url.searchParams.append("key", apiKey);
   const response = await fetch(url.toString());
@@ -95,11 +88,25 @@ const fetchApi = async <T>(
   return response.json() as Promise<T>;
 };
 
+const ensureAccessToken = async (oauth2Client: OAuth2Client): Promise<void> => {
+  const expiryDate = oauth2Client.credentials.expiry_date ?? 0;
+  if (expiryDate <= Date.now() + 60_000) {
+    await oauth2Client.refreshAccessToken();
+  }
+};
+
+export const refreshAccessToken = async (
+  oauth2Client: OAuth2Client,
+): Promise<void> => {
+  await ensureAccessToken(oauth2Client);
+};
+
 const fetchOAuth = async <T>(
   path: string,
   params: Record<string, string>,
   oauth2Client: OAuth2Client,
 ): Promise<T> => {
+  await ensureAccessToken(oauth2Client);
   const url = new URL(`${baseUrl}${path}`);
   for (const [key, value] of Object.entries(params)) {
     url.searchParams.append(key, value);
@@ -223,24 +230,9 @@ export const getChannelVideos = async (
     return [];
   }
 
-  const videoIds = results.map((v) => v.videoId).join(",");
-  const videosResponse = await fetchApi<ApiListResponse<VideoContentItem>>(
-    "/videos",
-    {
-      part: "contentDetails",
-      id: videoIds,
-    },
-    apiKey,
-  );
-
-  const durationMap = new Map<string, string>();
-  for (const item of videosResponse.items ?? []) {
-    durationMap.set(item.id, item.contentDetails.duration);
-  }
-
   return results.map((video) => ({
     ...video,
-    duration: durationMap.get(video.videoId) ?? "",
+    duration: "",
   }));
 };
 
@@ -260,9 +252,13 @@ export const addToPlaylist = async (
   playlistId: string,
   videoId: string,
 ): Promise<AddToPlaylistResult> => {
+  await ensureAccessToken(oauth2Client);
   const url = new URL(`${baseUrl}/playlistItems`);
   url.searchParams.append("part", "snippet");
   const accessToken = oauth2Client.credentials.access_token;
+  if (!accessToken) {
+    return { ok: false, error: "No valid access token available" };
+  }
   const response = await fetch(url.toString(), {
     method: "POST",
     headers: {

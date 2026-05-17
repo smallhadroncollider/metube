@@ -49,6 +49,15 @@ export const createOAuth2ClientFromTokens = (
   return oauth2Client;
 };
 
+export const refreshAccessToken = async (
+  oauth2Client: OAuth2Client,
+): Promise<void> => {
+  const expiryDate = oauth2Client.credentials.expiry_date ?? 0;
+  if (expiryDate <= Date.now() + 60_000) {
+    await oauth2Client.refreshAccessToken();
+  }
+};
+
 export const getUserInfo = async (
   oauth2Client: OAuth2Client,
 ): Promise<{
@@ -57,6 +66,7 @@ export const getUserInfo = async (
   name: string;
   picture: string;
 }> => {
+  await refreshAccessToken(oauth2Client);
   const accessToken = oauth2Client.credentials.access_token;
   const response = await fetch(
     "https://www.googleapis.com/oauth2/v2/userinfo",

@@ -28,16 +28,6 @@ const makePlaylistItem = (
   },
 });
 
-const makeVideosContentItem = (
-  videoId: string,
-  duration: string,
-): Record<string, unknown> => ({
-  id: videoId,
-  contentDetails: {
-    duration,
-  },
-});
-
 describe("YouTube API", () => {
   describe("channelIdToUploadsPlaylistId", () => {
     it("should convert UC prefix to UU prefix", async () => {
@@ -66,7 +56,7 @@ describe("YouTube API", () => {
       // Reset fetch mock before each test
     });
 
-    it("should return videos from playlist items with durations", async () => {
+    it("should return videos from playlist items", async () => {
       const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
         input: unknown,
       ) => {
@@ -89,23 +79,6 @@ describe("YouTube API", () => {
           );
         }
 
-        if (url.includes("/videos")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [
-                  makeVideosContentItem("vid1", "PT10M30S"),
-                  makeVideosContentItem("vid2", "PT5M15S"),
-                ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-          );
-        }
-
         return Promise.resolve(new Response("Not Found", { status: 404 }));
       }) as FetchMockFn);
 
@@ -115,10 +88,8 @@ describe("YouTube API", () => {
         expect(videos).toHaveLength(2);
         expect(videos[0]?.videoId).toBe("vid1");
         expect(videos[0]?.title).toBe("Video 1");
-        expect(videos[0]?.duration).toBe("PT10M30S");
         expect(videos[1]?.videoId).toBe("vid2");
         expect(videos[1]?.title).toBe("Video 2");
-        expect(videos[1]?.duration).toBe("PT5M15S");
       } finally {
         fetchMock.mockRestore();
       }
@@ -148,23 +119,6 @@ describe("YouTube API", () => {
           );
         }
 
-        if (url.includes("/videos")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [
-                  makeVideosContentItem("vid1", "PT10M30S"),
-                  makeVideosContentItem("vid2", "PT5M15S"),
-                ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-          );
-        }
-
         return Promise.resolve(new Response("Not Found", { status: 404 }));
       }) as FetchMockFn);
 
@@ -183,8 +137,8 @@ describe("YouTube API", () => {
         const hasOldVideo = videos.some((v) => v.videoId === "vid3");
         expect(hasOldVideo).toBe(false);
 
-        // Should have made 2 fetch calls (playlistItems + videos)
-        expect(fetchMock.mock.calls.length).toBe(2);
+        // Should have made 1 fetch call (playlistItems only)
+        expect(fetchMock.mock.calls.length).toBe(1);
       } finally {
         fetchMock.mockRestore();
       }
@@ -283,20 +237,6 @@ describe("YouTube API", () => {
                   },
                   makePlaylistItem("vid1", "Video 1", "2024-01-01T00:00:00Z"),
                 ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-          );
-        }
-
-        if (url.includes("/videos")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [makeVideosContentItem("vid1", "PT10M30S")],
               }),
               {
                 status: 200,

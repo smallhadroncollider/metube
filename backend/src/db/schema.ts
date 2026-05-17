@@ -9,6 +9,7 @@ export type User = {
   youtube_playlist_id: string;
   access_token: string;
   refresh_token: string;
+  expiry_date: string;
   created_at: string;
 };
 
@@ -52,6 +53,7 @@ export const initDb = (db: Database) => {
       youtube_playlist_id TEXT NOT NULL,
       access_token TEXT NOT NULL DEFAULT '',
       refresh_token TEXT NOT NULL DEFAULT '',
+      expiry_date TEXT NOT NULL DEFAULT '',
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     )
   `);
@@ -103,6 +105,12 @@ export const initDb = (db: Database) => {
     db.run(
       "ALTER TABLE users ADD COLUMN refresh_token TEXT NOT NULL DEFAULT ''",
     );
+  } catch {
+    // Column already exists
+  }
+
+  try {
+    db.run("ALTER TABLE users ADD COLUMN expiry_date TEXT NOT NULL DEFAULT ''");
   } catch {
     // Column already exists
   }

@@ -1,23 +1,16 @@
 import { type IRouter, Router, type Request, type Response } from "express";
 import type { Database } from "bun:sqlite";
-import type { OAuth2Client } from "google-auth-library";
 import {
   getUserInfo,
   createOAuth2ClientFromTokens,
   requestDeviceAuthorization,
   pollDeviceToken,
 } from "../auth/auth.js";
-import {
-  getUserByGoogleId,
-  createUser,
-  updateUserTokens,
-  getUserTokens,
-} from "../db/repo.js";
+import { getUserByGoogleId, createUser, updateUserTokens } from "../db/repo.js";
 
 declare module "express-session" {
   interface SessionData {
     userId: number;
-    oauth2Client?: OAuth2Client;
   }
 }
 
@@ -28,7 +21,6 @@ const getRedirectUri = (): string =>
   "http://localhost:3000/auth/google/callback";
 
 type DeviceAuthState = {
-  oauth2Client: OAuth2Client;
   user: {
     id: number;
     google_id: string;
@@ -98,14 +90,14 @@ const startDeviceAuthPolling = (
     }
 
     const tokens = pollResponse.tokens;
-    const oauth2Client = createOAuth2ClientFromTokens(
-      getClientId(),
-      getClientSecret(),
-      getRedirectUri(),
-      tokens,
+    const userInfo = await getUserInfo(
+      createOAuth2ClientFromTokens(
+        getClientId(),
+        getClientSecret(),
+        getRedirectUri(),
+        tokens,
+      ),
     );
-
-    const userInfo = await getUserInfo(oauth2Client);
 
     let user = getUserByGoogleId(db, userInfo.id);
     if (!user) {
@@ -120,10 +112,15 @@ const startDeviceAuthPolling = (
       );
     }
 
-    updateUserTokens(db, user.id, tokens.access_token, tokens.refresh_token);
+    updateUserTokens(
+      db,
+      user.id,
+      tokens.access_token,
+      tokens.refresh_token,
+      tokens.expiry_date ?? 0,
+    );
 
     const authState: DeviceAuthState = {
-      oauth2Client,
       user: {
         id: user.id,
         google_id: user.google_id,
@@ -193,7 +190,6 @@ export const authRoutes = (db: Database): IRouter => {
       }
 
       req.session.userId = state.data.user.id;
-      req.session.oauth2Client = state.data.oauth2Client;
       res.json({ status: "complete", userId: state.data.user.id });
     } catch (error) {
       res.status(500).json({ error: (error as Error).message });
@@ -206,23 +202,16 @@ export const authRoutes = (db: Database): IRouter => {
       return;
     }
 
-    if (!req.session.oauth2Client) {
-      const storedTokens = getUserTokens(db, req.session.userId);
-      if (storedTokens && storedTokens.refreshToken) {
-        const oauth2Client = createOAuth2ClientFromTokens(
-          getClientId(),
-          getClientSecret(),
-          getRedirectUri(),
-          {
-            access_token: storedTokens.accessToken,
-            refresh_token: storedTokens.refreshToken,
-          },
-        );
-        req.session.oauth2Client = oauth2Client;
-      }
+    res.json({ authenticated: true, userId: req.session.userId });
+  });
+
+  router.post("/refresh", async (req: Request, res: Response) => {
+    if (!req.session.userId) {
+      res.status(401).json({ error: "Not authenticated" });
+      return;
     }
 
-    res.json({ authenticated: true, userId: req.session.userId });
+    res.json({ success: true });
   });
 
   router.post("/logout", (req: Request, res: Response) => {

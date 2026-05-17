@@ -65,15 +65,13 @@ const SubscriptionManager = ({
                 src={channel.thumbnail}
                 alt={channel.title}
                 className={styles.channelThumb}
-                delay={index * 250}
+                delay={index * 250 + 250}
               />
               <span className={styles.channelName}>{channel.title}</span>
               {isSubscribed(channel.channelId) ? (
                 <button
                   className={styles.unsubscribeBtn}
-                  onClick={() =>
-                    onUnsubscribe(channel.channelId)
-                  }
+                  onClick={() => onUnsubscribe(channel.channelId)}
                   title="Unsubscribe"
                 >
                   ×

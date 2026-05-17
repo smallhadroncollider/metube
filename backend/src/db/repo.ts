@@ -40,19 +40,26 @@ export const updateUserTokens = (
   userId: number,
   accessToken: string,
   refreshToken: string,
+  expiryDate: number,
 ): void => {
   db.query(
-    "UPDATE users SET access_token = ?, refresh_token = ? WHERE id = ?",
-  ).run(accessToken, refreshToken, userId);
+    "UPDATE users SET access_token = ?, refresh_token = ?, expiry_date = ? WHERE id = ?",
+  ).run(accessToken, refreshToken, String(expiryDate), userId);
 };
 
 export const getUserTokens = (
   db: Database,
   userId: number,
-): { accessToken: string; refreshToken: string } | null => {
+): { accessToken: string; refreshToken: string; expiryDate: number } | null => {
   const row = db
-    .query("SELECT access_token, refresh_token FROM users WHERE id = ?")
-    .get(userId) as { access_token: string; refresh_token: string } | null;
+    .query(
+      "SELECT access_token, refresh_token, expiry_date FROM users WHERE id = ?",
+    )
+    .get(userId) as {
+    access_token: string;
+    refresh_token: string;
+    expiry_date: string;
+  } | null;
 
   if (!row) {
     return null;
@@ -61,6 +68,7 @@ export const getUserTokens = (
   return {
     accessToken: row.access_token,
     refreshToken: row.refresh_token,
+    expiryDate: parseInt(row.expiry_date, 10) ?? 0,
   };
 };
 

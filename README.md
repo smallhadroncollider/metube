@@ -106,6 +106,7 @@ bun run test:frontend
 - **Auth**: Google OAuth 2.0 Device Flow with persistent tokens in SQLite
 - **Sessions**: SQLite-based session store (survives restarts)
 - **API**: REST API with session-based auth
+- **Token Refresh**: Automatic OAuth2 token refresh before API calls
 
 ### Frontend
 

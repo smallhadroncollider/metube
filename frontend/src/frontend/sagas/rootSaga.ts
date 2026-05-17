@@ -161,7 +161,9 @@ function* fetchVideos(): Generator<
     const response: VideosResponse = yield call(api.getVideos);
     yield put(sagaFetchVideosSucceeded(response.videos));
   } catch (error) {
-    yield put(sagaFetchVideosFailed((error as Error).message));
+    const errorMessage = (error as Error).message;
+    yield put(sagaFetchVideosFailed(errorMessage));
+    yield put(addToast({ message: errorMessage, type: "error" }));
   }
 }
 
@@ -204,8 +206,10 @@ function* syncVideos(): Generator<CallEffect | PutEffect, void, SyncResponse> {
     yield put(sagaSyncVideosSucceeded());
     yield put(sagaFetchVideosStarted());
   } catch (error) {
+    const errorMessage = (error as Error).message;
     yield put(sagaSyncVideosSucceeded());
-    yield put(sagaFetchVideosFailed((error as Error).message));
+    yield put(sagaFetchVideosFailed(errorMessage));
+    yield put(addToast({ message: errorMessage, type: "error" }));
   }
 }
 
@@ -218,7 +222,9 @@ function* fetchSubscriptions(): Generator<
     const response: SubscriptionsResponse = yield call(api.getSubscriptions);
     yield put(sagaFetchSubscriptionsSucceeded(response.subscriptions));
   } catch (error) {
-    yield put(sagaFetchVideosFailed((error as Error).message));
+    const errorMessage = (error as Error).message;
+    yield put(sagaFetchVideosFailed(errorMessage));
+    yield put(addToast({ message: errorMessage, type: "error" }));
   }
 }
 
@@ -232,7 +238,9 @@ function* searchChannels(action: {
     );
     yield put(sagaSearchChannelsSucceeded(response.channels));
   } catch (error) {
-    yield put(sagaFetchVideosFailed((error as Error).message));
+    const errorMessage = (error as Error).message;
+    yield put(sagaFetchVideosFailed(errorMessage));
+    yield put(addToast({ message: errorMessage, type: "error" }));
   }
 }
 
@@ -253,7 +261,9 @@ function* subscribe(action: {
     yield put(sagaSubscribeSucceeded(response.subscription as never));
     yield put(sagaSearchChannelsSucceeded([]));
   } catch (error) {
-    yield put(sagaFetchVideosFailed((error as Error).message));
+    const errorMessage = (error as Error).message;
+    yield put(sagaFetchVideosFailed(errorMessage));
+    yield put(addToast({ message: errorMessage, type: "error" }));
   }
 }
 
@@ -264,7 +274,9 @@ function* unsubscribe(_action: {
     yield call(api.removeSubscription, _action.payload as string);
     yield put(sagaUnsubscribeSucceeded(_action.payload as string));
   } catch (error) {
-    yield put(sagaFetchVideosFailed((error as Error).message));
+    const errorMessage = (error as Error).message;
+    yield put(sagaFetchVideosFailed(errorMessage));
+    yield put(addToast({ message: errorMessage, type: "error" }));
   }
 }
 
