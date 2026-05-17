@@ -73,7 +73,10 @@ const startDeviceAuthPolling = (
       deviceCode,
     );
 
-    if (pollResponse.status === "authorization_pending") {
+    if (
+      pollResponse.status === "authorization_pending" ||
+      pollResponse.status === "pending"
+    ) {
       deviceAuthStates.set(deviceCode, { status: "pending" });
       return;
     }

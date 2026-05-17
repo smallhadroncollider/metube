@@ -1,0 +1,364 @@
+import { describe, it, expect, beforeEach, spyOn } from "bun:test";
+import {
+  getChannelVideos,
+  parseDurationSeconds,
+  normalizeTimestamp,
+} from "../src/youtube/youtube.js";
+
+type FetchMockFn = (
+  input: RequestInfo | URL,
+  init?: RequestInit,
+) => Promise<Response>;
+
+const makePlaylistItem = (
+  videoId: string,
+  title: string,
+  publishedAt: string,
+): Record<string, unknown> => ({
+  snippet: {
+    title,
+    description: "Description",
+    publishedAt,
+    thumbnails: {
+      high: { url: `https://thumb.com/${videoId}.jpg` },
+    },
+  },
+  contentDetails: {
+    videoId,
+  },
+});
+
+const makeVideosContentItem = (
+  videoId: string,
+  duration: string,
+): Record<string, unknown> => ({
+  id: videoId,
+  contentDetails: {
+    duration,
+  },
+});
+
+describe("YouTube API", () => {
+  describe("channelIdToUploadsPlaylistId", () => {
+    it("should convert UC prefix to UU prefix", async () => {
+      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(() =>
+        Promise.resolve(
+          new Response(JSON.stringify({ items: [] }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+        ),
+      ) as FetchMockFn;
+
+      try {
+        await getChannelVideos("fake-key", "UCabcdefghijklmnop");
+        const call = fetchMock.mock.calls[0];
+        const url = call[0] as string;
+        expect(url).toContain("playlistId=UUabcdefghijklmnop");
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+  });
+
+  describe("getChannelVideos", () => {
+    beforeEach(() => {
+      // Reset fetch mock before each test
+    });
+
+    it("should return videos from playlist items with durations", async () => {
+      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
+        input: unknown,
+      ) => {
+        const url = typeof input === "string" ? input : (input as Request).url;
+
+        if (url.includes("/playlistItems")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  makePlaylistItem("vid1", "Video 1", "2024-01-02T00:00:00Z"),
+                  makePlaylistItem("vid2", "Video 2", "2024-01-01T00:00:00Z"),
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        if (url.includes("/videos")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  makeVideosContentItem("vid1", "PT10M30S"),
+                  makeVideosContentItem("vid2", "PT5M15S"),
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }) as FetchMockFn);
+
+      try {
+        const videos = await getChannelVideos("fake-key", "UCchannel123");
+
+        expect(videos).toHaveLength(2);
+        expect(videos[0]?.videoId).toBe("vid1");
+        expect(videos[0]?.title).toBe("Video 1");
+        expect(videos[0]?.duration).toBe("PT10M30S");
+        expect(videos[1]?.videoId).toBe("vid2");
+        expect(videos[1]?.title).toBe("Video 2");
+        expect(videos[1]?.duration).toBe("PT5M15S");
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+
+    it("should filter by publishedAfter and stop early", async () => {
+      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
+        input: unknown,
+      ) => {
+        const url = typeof input === "string" ? input : (input as Request).url;
+
+        if (url.includes("/playlistItems")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  makePlaylistItem("vid1", "Video 1", "2024-01-03T00:00:00Z"),
+                  makePlaylistItem("vid2", "Video 2", "2024-01-02T00:00:00Z"),
+                  makePlaylistItem("vid3", "Old Video", "2024-01-01T00:00:00Z"),
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        if (url.includes("/videos")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  makeVideosContentItem("vid1", "PT10M30S"),
+                  makeVideosContentItem("vid2", "PT5M15S"),
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }) as FetchMockFn);
+
+      try {
+        const videos = await getChannelVideos(
+          "fake-key",
+          "UCchannel123",
+          "2024-01-01T00:00:00Z",
+        );
+
+        expect(videos).toHaveLength(2);
+        expect(videos[0]?.videoId).toBe("vid1");
+        expect(videos[1]?.videoId).toBe("vid2");
+
+        // vid3 should not be included (publishedAt is not after the cutoff)
+        const hasOldVideo = videos.some((v) => v.videoId === "vid3");
+        expect(hasOldVideo).toBe(false);
+
+        // Should have made 2 fetch calls (playlistItems + videos)
+        expect(fetchMock.mock.calls.length).toBe(2);
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+
+    it("should return empty array when no videos match publishedAfter", async () => {
+      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
+        input: unknown,
+      ) => {
+        const url = typeof input === "string" ? input : (input as Request).url;
+
+        if (url.includes("/playlistItems")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  makePlaylistItem("vid1", "Old Video", "2024-01-01T00:00:00Z"),
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }) as FetchMockFn);
+
+      try {
+        const videos = await getChannelVideos(
+          "fake-key",
+          "UCchannel123",
+          "2024-01-02T00:00:00Z",
+        );
+
+        expect(videos).toHaveLength(0);
+
+        // Should not call /videos endpoint since no videos matched
+        const videoCalls = fetchMock.mock.calls.filter((call) => {
+          const url = call[0] as string;
+          return url.includes("/videos");
+        });
+        expect(videoCalls.length).toBe(0);
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+
+    it("should return empty array when playlist has no items", async () => {
+      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
+        input: unknown,
+      ) => {
+        const url = typeof input === "string" ? input : (input as Request).url;
+
+        if (url.includes("/playlistItems")) {
+          return Promise.resolve(
+            new Response(JSON.stringify({ items: [] }), {
+              status: 200,
+              headers: { "Content-Type": "application/json" },
+            }),
+          );
+        }
+
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }) as FetchMockFn);
+
+      try {
+        const videos = await getChannelVideos("fake-key", "UCchannel123");
+        expect(videos).toHaveLength(0);
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+
+    it("should skip items with missing videoId", async () => {
+      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
+        input: unknown,
+      ) => {
+        const url = typeof input === "string" ? input : (input as Request).url;
+
+        if (url.includes("/playlistItems")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  {
+                    snippet: {
+                      title: "No Video ID",
+                      description: "",
+                      publishedAt: "2024-01-01T00:00:00Z",
+                      thumbnails: {},
+                    },
+                    contentDetails: { videoId: "" },
+                  },
+                  makePlaylistItem("vid1", "Video 1", "2024-01-01T00:00:00Z"),
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        if (url.includes("/videos")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [makeVideosContentItem("vid1", "PT10M30S")],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }) as FetchMockFn);
+
+      try {
+        const videos = await getChannelVideos("fake-key", "UCchannel123");
+        expect(videos).toHaveLength(1);
+        expect(videos[0]?.videoId).toBe("vid1");
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+  });
+
+  describe("parseDurationSeconds", () => {
+    it("should parse hours, minutes, and seconds", () => {
+      expect(parseDurationSeconds("PT1H30M45S")).toBe(5445);
+    });
+
+    it("should parse minutes and seconds only", () => {
+      expect(parseDurationSeconds("PT10M30S")).toBe(630);
+    });
+
+    it("should parse seconds only", () => {
+      expect(parseDurationSeconds("PT45S")).toBe(45);
+    });
+
+    it("should parse hours only", () => {
+      expect(parseDurationSeconds("PT2H")).toBe(7200);
+    });
+
+    it("should return 0 for invalid format", () => {
+      expect(parseDurationSeconds("invalid")).toBe(0);
+    });
+
+    it("should return 0 for empty string", () => {
+      expect(parseDurationSeconds("")).toBe(0);
+    });
+  });
+
+  describe("normalizeTimestamp", () => {
+    it("should return timestamps ending with Z unchanged", () => {
+      expect(normalizeTimestamp("2024-01-01T00:00:00Z")).toBe(
+        "2024-01-01T00:00:00Z",
+      );
+    });
+
+    it("should normalize timestamps with timezone offset", () => {
+      const result = normalizeTimestamp("2024-01-01T00:00:00+00:00");
+      expect(result).toMatch(/Z$/);
+    });
+
+    it("should return empty string for invalid timestamps", () => {
+      expect(normalizeTimestamp("not-a-date")).toBe("");
+    });
+  });
+});

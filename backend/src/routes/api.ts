@@ -49,6 +49,14 @@ const getBodyString = (body: unknown, field: string): string | null => {
   return typeof value === "string" ? value : null;
 };
 
+const getParamString = (
+  params: Record<string, string | string[] | undefined>,
+  key: string,
+): string => {
+  const value = params[key];
+  return typeof value === "string" ? value : "";
+};
+
 const getUserId = (req: Request): number => {
   if (typeof req.session.userId !== "number") {
     throw new Error("User not authenticated");
@@ -68,7 +76,7 @@ export const apiRoutes = (db: Database): IRouter => {
 
   router.post("/videos/:videoId/add", async (req: Request, res: Response) => {
     const userId = getUserId(req);
-    const videoId = req.params.videoId ?? "";
+    const videoId = getParamString(req.params, "videoId");
     const channelId = getBodyString(req.body, "channelId");
     const user = getUserById(db, userId);
 
@@ -105,7 +113,7 @@ export const apiRoutes = (db: Database): IRouter => {
   });
 
   router.post("/videos/:videoId/ignore", (req: Request, res: Response) => {
-    const videoId = req.params.videoId ?? "";
+    const videoId = getParamString(req.params, "videoId");
     const channelId = getBodyString(req.body, "channelId");
 
     if (!channelId) {
@@ -152,7 +160,7 @@ export const apiRoutes = (db: Database): IRouter => {
 
   router.delete("/subscriptions/:channelId", (req: Request, res: Response) => {
     const userId = getUserId(req);
-    const channelId = req.params.channelId ?? "";
+    const channelId = getParamString(req.params, "channelId");
     removeSubscription(db, userId, channelId);
     res.json({ success: true });
   });

@@ -39,7 +39,6 @@ type SearchItem = {
 };
 
 type PlaylistItem = {
-  contentDetails: { videoId: string };
   snippet: {
     title: string;
     description: string;
@@ -48,6 +47,9 @@ type PlaylistItem = {
       default?: { url: string };
       high?: { url: string };
     };
+  };
+  contentDetails: {
+    videoId: string;
   };
 };
 
@@ -152,50 +154,76 @@ export const searchChannels = async (
     .filter((channel) => channel.channelId !== "" && channel.title !== "");
 };
 
+const channelIdToUploadsPlaylistId = (channelId: string): string => {
+  if (channelId.startsWith("UC")) {
+    return "UU" + channelId.slice(2);
+  }
+  return channelId;
+};
+
 export const getChannelVideos = async (
   apiKey: string,
   channelId: string,
   publishedAfter: string | null = null,
 ): Promise<VideoResult[]> => {
-  const params: Record<string, string> = {
-    part: "snippet",
-    channelId,
-    type: "video",
-    maxResults: "50",
-    order: "date",
-  };
-  if (publishedAfter) {
-    params.publishedAfter = publishedAfter;
-  }
+  const playlistId = channelIdToUploadsPlaylistId(channelId);
+  const results: VideoResult[] = [];
+  let nextPageToken: string | undefined;
 
-  const response = await fetchApi<ApiListResponse<SearchItem>>(
-    "/search",
-    params,
-    apiKey,
-  );
+  let stopped = false;
 
-  const items = response.items ?? [];
-  const searchVideos = items
-    .map((item) => ({
-      videoId: item.id.videoId ?? "",
-      title: item.snippet.title,
-      description: item.snippet.description,
-      thumbnail:
-        item.snippet.thumbnails.high?.url ??
-        item.snippet.thumbnails.default?.url ??
-        "",
-      publishedAt: normalizeTimestamp(item.snippet.publishedAt),
-    }))
-    .filter(
-      (video) =>
-        video.videoId !== "" && video.title !== "" && video.publishedAt !== "",
+  do {
+    const params: Record<string, string> = {
+      part: "snippet,contentDetails",
+      playlistId,
+      maxResults: "50",
+    };
+    if (nextPageToken) {
+      params.pageToken = nextPageToken;
+    }
+
+    const response = await fetchApi<ApiListResponse<PlaylistItem>>(
+      "/playlistItems",
+      params,
+      apiKey,
     );
 
-  if (searchVideos.length === 0) {
+    const items = response.items ?? [];
+
+    for (const item of items) {
+      const publishedAt = normalizeTimestamp(item.snippet.publishedAt);
+
+      if (publishedAfter && publishedAt <= publishedAfter) {
+        stopped = true;
+        break;
+      }
+
+      const videoId = item.contentDetails.videoId;
+      if (!videoId || !item.snippet.title || !publishedAt) {
+        continue;
+      }
+
+      results.push({
+        videoId,
+        title: item.snippet.title,
+        description: item.snippet.description,
+        thumbnail:
+          item.snippet.thumbnails.high?.url ??
+          item.snippet.thumbnails.default?.url ??
+          "",
+        duration: "",
+        publishedAt,
+      });
+    }
+
+    nextPageToken = response.nextPageToken;
+  } while (nextPageToken && !stopped && (!publishedAfter || nextPageToken));
+
+  if (results.length === 0) {
     return [];
   }
 
-  const videoIds = searchVideos.map((v) => v.videoId).join(",");
+  const videoIds = results.map((v) => v.videoId).join(",");
   const videosResponse = await fetchApi<ApiListResponse<VideoContentItem>>(
     "/videos",
     {
@@ -210,7 +238,7 @@ export const getChannelVideos = async (
     durationMap.set(item.id, item.contentDetails.duration);
   }
 
-  return searchVideos.map((video) => ({
+  return results.map((video) => ({
     ...video,
     duration: durationMap.get(video.videoId) ?? "",
   }));
