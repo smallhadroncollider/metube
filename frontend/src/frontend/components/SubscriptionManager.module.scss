@@ -80,6 +80,16 @@
   height: 28px;
   border-radius: 50%;
   object-fit: cover;
+  animation: fadeChannelThumb 200ms ease-out;
+}
+
+@keyframes fadeChannelThumb {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .fallbackAvatar {

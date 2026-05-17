@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Subscription, ApiChannel } from "../types/index.js";
 import styles from "./SubscriptionManager.module.scss";
 
@@ -20,18 +20,25 @@ const ChannelAvatar = ({
   src,
   alt,
   className,
+  delay = 0,
 }: {
   src: string;
   alt: string;
   className: string | undefined;
+  delay?: number;
 }) => {
   const [isErrored, setIsErrored] = useState(() => erroredImages.has(src));
+  const [revealed, setRevealed] = useState(delay === 0);
 
-  if (isErrored) {
+  useEffect(() => {
+    if (delay === 0) return;
+    const timer = setTimeout(() => setRevealed(true), delay);
+    return () => clearTimeout(timer);
+  }, [delay]);
+
+  if (isErrored || !revealed) {
     return (
-      <div className={styles.fallbackAvatar}>
-        {alt.charAt(0).toUpperCase()}
-      </div>
+      <div className={styles.fallbackAvatar}>{alt.charAt(0).toUpperCase()}</div>
     );
   }
 
@@ -90,12 +97,13 @@ const SubscriptionManager = ({
       {searchResults.length > 0 && (
         <div className={styles.results}>
           <h3>Search Results</h3>
-          {searchResults.map((channel) => (
+          {searchResults.map((channel, index) => (
             <div key={channel.channelId} className={styles.channel}>
               <ChannelAvatar
                 src={channel.thumbnail}
                 alt={channel.title}
                 className={styles.channelThumb}
+                delay={index * 250}
               />
               <span className={styles.channelName}>{channel.title}</span>
               {isSubscribed(channel.channelId) ? (
@@ -121,12 +129,13 @@ const SubscriptionManager = ({
 
       <div className={styles.subscriptions}>
         <h3>Subscribed ({subscriptions.length})</h3>
-        {subscriptions.map((sub) => (
+        {subscriptions.map((sub, index) => (
           <div key={sub.channel_id} className={styles.channel}>
             <ChannelAvatar
               src={sub.channel_thumbnail}
               alt={sub.channel_title}
               className={styles.channelThumb}
+              delay={index * 100}
             />
             <span className={styles.channelName}>{sub.channel_title}</span>
             <button
