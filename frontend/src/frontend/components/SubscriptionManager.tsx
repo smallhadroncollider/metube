@@ -67,7 +67,7 @@ const SubscriptionManager = ({
               />
               <span className={styles.channelName}>{channel.title}</span>
               {isSubscribed(channel.channelId) ? (
-                <span className={styles.subscribed}>Subscribed</span>
+                <span className={styles.subscribed}>✓</span>
               ) : (
                 <button
                   className={styles.subscribeBtn}
@@ -78,8 +78,9 @@ const SubscriptionManager = ({
                       channel.thumbnail,
                     )
                   }
+                  title="Subscribe"
                 >
-                  Subscribe
+                  +
                 </button>
               )}
             </div>
@@ -101,8 +102,9 @@ const SubscriptionManager = ({
             <button
               className={styles.unsubscribeBtn}
               onClick={() => onUnsubscribe(sub.channel_id)}
+              title="Unsubscribe"
             >
-              Unsubscribe
+              −
             </button>
           </div>
         ))}

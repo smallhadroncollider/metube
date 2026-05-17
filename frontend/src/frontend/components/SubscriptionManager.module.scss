@@ -1,10 +1,11 @@
 .manager {
   border: 1px solid rgba(128, 128, 128, 0.2);
   border-radius: 12px;
-  padding: 16px;
+  padding: 12px;
   height: fit-content;
   position: sticky;
   top: 20px;
+  min-width: 0;
 }
 
 .dark .manager {
@@ -16,25 +17,27 @@
 }
 
 .heading {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  margin-bottom: 16px;
+  margin-bottom: 12px;
 }
 
 .search {
   display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
+  gap: 4px;
+  margin-bottom: 12px;
 
   input {
     flex: 1;
+    font-size: 12px;
+    padding: 6px 8px;
   }
 
   button {
     background: #6366f1;
     color: white;
-    padding: 8px 12px;
-    font-size: 13px;
+    padding: 6px 8px;
+    font-size: 12px;
 
     &:hover {
       background: #4f46e5;
@@ -43,21 +46,21 @@
 }
 
 .results {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 
   h3 {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     opacity: 0.7;
   }
 }
 
 .subscriptions {
   h3 {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     opacity: 0.7;
   }
 }
@@ -65,10 +68,10 @@
 .channel {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px;
+  gap: 6px;
+  padding: 6px;
   border-radius: 8px;
-  margin-bottom: 4px;
+  margin-bottom: 2px;
 
   &:hover {
     background: rgba(128, 128, 128, 0.1);
@@ -76,16 +79,18 @@
 }
 
 .channelThumb {
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   object-fit: cover;
   animation: fadeChannelThumb 200ms ease-out;
+  flex-shrink: 0;
 }
 
 .channelName {
   flex: 1;
-  font-size: 13px;
+  min-width: 0;
+  font-size: 12px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -94,8 +99,17 @@
 .subscribeBtn {
   background: #22c55e;
   color: white;
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: 4px 6px;
+  font-size: 14px;
+  line-height: 1;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 
   &:hover {
     background: #16a34a;
@@ -105,8 +119,17 @@
 .unsubscribeBtn {
   background: rgba(239, 68, 68, 0.1);
   color: #ef4444;
-  padding: 4px 10px;
-  font-size: 12px;
+  padding: 4px 6px;
+  font-size: 14px;
+  line-height: 1;
+  border: none;
+  cursor: pointer;
+  border-radius: 4px;
+  min-width: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 
   &:hover {
     background: rgba(239, 68, 68, 0.2);

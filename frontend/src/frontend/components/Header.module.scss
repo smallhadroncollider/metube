@@ -35,7 +35,7 @@
 .user {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
 }
 
 .avatar {
@@ -47,6 +47,14 @@
 
 .userName {
   font-weight: 500;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+  @media (max-width: 900px) {
+    display: none;
+  }
 }
 
 .logout {
