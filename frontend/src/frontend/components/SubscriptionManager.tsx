@@ -1,10 +1,5 @@
 import { useState } from "react";
 import type { Subscription, ApiChannel } from "../types/index.js";
-import {
-  sagaSearchChannelsRequested,
-  sagaSubscribeRequested,
-  sagaUnsubscribeRequested,
-} from "../slices/subscriptionsSlice.js";
 import styles from "./SubscriptionManager.module.scss";
 
 type SubscriptionManagerProps = {
@@ -17,6 +12,40 @@ type SubscriptionManagerProps = {
     channelThumbnail: string,
   ) => void;
   onUnsubscribe: (channelId: string) => void;
+};
+
+const erroredImages = new Set<string>();
+
+const ChannelAvatar = ({
+  src,
+  alt,
+  className,
+}: {
+  src: string;
+  alt: string;
+  className: string | undefined;
+}) => {
+  const [isErrored, setIsErrored] = useState(() => erroredImages.has(src));
+
+  if (isErrored) {
+    return (
+      <div className={styles.fallbackAvatar}>
+        {alt.charAt(0).toUpperCase()}
+      </div>
+    );
+  }
+
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className={className}
+      onError={() => {
+        erroredImages.add(src);
+        setIsErrored(true);
+      }}
+    />
+  );
 };
 
 const SubscriptionManager = ({
@@ -63,7 +92,7 @@ const SubscriptionManager = ({
           <h3>Search Results</h3>
           {searchResults.map((channel) => (
             <div key={channel.channelId} className={styles.channel}>
-              <img
+              <ChannelAvatar
                 src={channel.thumbnail}
                 alt={channel.title}
                 className={styles.channelThumb}
@@ -94,7 +123,7 @@ const SubscriptionManager = ({
         <h3>Subscribed ({subscriptions.length})</h3>
         {subscriptions.map((sub) => (
           <div key={sub.channel_id} className={styles.channel}>
-            <img
+            <ChannelAvatar
               src={sub.channel_thumbnail}
               alt={sub.channel_title}
               className={styles.channelThumb}
