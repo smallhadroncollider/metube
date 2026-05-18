@@ -34,7 +34,16 @@ const DeviceAuthResponseSchema: z.ZodType<DeviceAuthResponse> = z.object({
   expires_in: z.number(),
 });
 
+const DevicePollPendingSchema = z.object({
+  status: z.literal("pending"),
+});
+
+const DevicePollSlowDownSchema = z.object({
+  status: z.literal("slow_down"),
+});
+
 const DevicePollErrorSchema = z.object({
+  status: z.literal("error"),
   error: z.string(),
 });
 
@@ -42,6 +51,13 @@ const DevicePollCompleteSchema = z.object({
   status: z.literal("complete"),
   userId: z.number(),
 });
+
+const DevicePollResponseSchema = z.discriminatedUnion("status", [
+  DevicePollCompleteSchema,
+  DevicePollPendingSchema,
+  DevicePollSlowDownSchema,
+  DevicePollErrorSchema,
+]);
 
 const VideosResponseSchema = z.object({
   videos: z.array(
@@ -156,15 +172,7 @@ export const pollDeviceToken = async (
     return { status: "error", error: error.error };
   }
 
-  const pollError = DevicePollErrorSchema.safeParse(data);
-  if (pollError.success) {
-    if (pollError.data.error === "slow_down") {
-      return { status: "slow_down" };
-    }
-    return { status: "error", error: pollError.data.error };
-  }
-
-  return DevicePollCompleteSchema.parse(data);
+  return DevicePollResponseSchema.parse(data);
 };
 
 export const logout = (): Promise<SuccessResponse> =>

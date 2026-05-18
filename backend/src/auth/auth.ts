@@ -102,7 +102,7 @@ const DevicePollErrorSchema = z.object({
 const DevicePollCompleteSchema = z.object({
   access_token: z.string(),
   refresh_token: z.string(),
-  expiry_date: z.number(),
+  expiry_date: z.number().optional(),
 });
 
 export type DevicePollResponse =
