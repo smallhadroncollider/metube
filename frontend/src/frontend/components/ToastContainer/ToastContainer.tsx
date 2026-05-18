@@ -1,11 +1,17 @@
-import { useSelector } from "react-redux";
-import type { RootState } from "../store/configureStore.js";
-import Toast from "./Toast.js";
+import { Toast } from "../Toast/index.js";
 import styles from "./ToastContainer.module.scss";
 
-const ToastContainer = () => {
-  const toasts = useSelector((state: RootState) => state.toasts.toasts);
+type ToastData = {
+  id: string;
+  message: string;
+  type: "error" | "success";
+};
 
+type ToastContainerProps = {
+  toasts: ToastData[];
+};
+
+const ToastContainer = ({ toasts }: ToastContainerProps) => {
   if (toasts.length === 0) {
     return null;
   }
@@ -24,4 +30,4 @@ const ToastContainer = () => {
   );
 };
 
-export default ToastContainer;
+export { ToastContainer };

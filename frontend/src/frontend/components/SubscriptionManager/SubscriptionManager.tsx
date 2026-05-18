@@ -1,6 +1,6 @@
 import { useState } from "react";
-import type { Subscription, ApiChannel } from "../types/index.js";
-import Avatar from "./Avatar.js";
+import type { Subscription, ApiChannel } from "../../types/index.js";
+import { Avatar } from "../Avatar/index.js";
 import styles from "./SubscriptionManager.module.scss";
 
 type SubscriptionManagerProps = {
@@ -121,4 +121,4 @@ const SubscriptionManager = ({
   );
 };
 
-export default SubscriptionManager;
+export { SubscriptionManager };

@@ -1,4 +1,4 @@
-import type { Video } from "../types/index.js";
+import type { Video } from "../../types/index.js";
 import styles from "./VideoCard.module.scss";
 
 type VideoCardProps = {
@@ -84,4 +84,4 @@ const VideoCard = ({
   );
 };
 
-export default VideoCard;
+export { VideoCard };

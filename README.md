@@ -140,8 +140,18 @@ bun run test:frontend
 ├── frontend/
 │   ├── src/frontend/
 │   │   ├── api/           # API client
-│   │   ├── components/    # React components
-│   │   │   └── connected/ # Connected wrappers
+│   │   ├── components/    # React components (subdirectory per component)
+│   │   │   ├── App/       # App wrapper (connect + initialization)
+│   │   │   ├── Avatar/    # Avatar display
+│   │   │   ├── DeviceAuthPolling/  # Device auth flow UI
+│   │   │   ├── Header/    # Header with auth status & dark mode toggle
+│   │   │   ├── Layout/    # Shell layout wrapper
+│   │   │   ├── MainContent/  # Auth check & video/subscription grid
+│   │   │   ├── SubscriptionManager/  # Channel search & subscriptions
+│   │   │   ├── Toast/     # Toast notification
+│   │   │   ├── ToastContainer/  # Toast list wrapper
+│   │   │   ├── VideoCard/     # Individual video card
+│   │   │   └── VideoList/     # Video list with sync actions
 │   │   ├── sagas/         # Redux Sagas
 │   │   ├── slices/        # Redux Toolkit slices
 │   │   ├── store/         # Store configuration
@@ -150,6 +160,11 @@ bun run test:frontend
 │   └── tests/             # Frontend tests
 └── public/                # Static assets
 ```
+
+Each component lives in a subdirectory with three files:
+- `index.ts` or `index.tsx` — connected wrapper (or re-export for non-Redux components)
+- `ComponentName.tsx` — presentational component (pure, receives props)
+- `ComponentName.module.scss` — scoped styles
 
 ## Google Cloud Setup
 

@@ -56,4 +56,4 @@ const formatTime = (seconds: number): string => {
   return `${mins}:${secs.toString().padStart(2, "0")}`;
 };
 
-export default DeviceAuthPolling;
+export { DeviceAuthPolling };

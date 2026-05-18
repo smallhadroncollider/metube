@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
-
-import type { Video, Subscription } from "../types/index.js";
-import VideoCard from "./VideoCard.js";
+import type { Video, Subscription } from "../../types/index.js";
+import { VideoCard } from "../VideoCard/index.js";
 import styles from "./VideoList.module.scss";
 
 type VideoListProps = {
@@ -129,4 +128,4 @@ const VideoList = ({
   );
 };
 
-export default VideoList;
+export { VideoList };

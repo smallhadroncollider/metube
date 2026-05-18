@@ -1,4 +1,4 @@
-import Avatar from "./Avatar.js";
+import { Avatar } from "../Avatar/index.js";
 import styles from "./Header.module.scss";
 
 type HeaderProps = {
@@ -48,4 +48,4 @@ const Header = ({
   );
 };
 
-export default Header;
+export { Header };

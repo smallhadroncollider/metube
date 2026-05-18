@@ -1,31 +1,29 @@
 import { useEffect } from "react";
-import { useDispatch } from "react-redux";
-import { removeToast } from "../slices/toastsSlice.js";
+import { removeToast } from "../../slices/toastsSlice.js";
 import styles from "./Toast.module.scss";
 
 type ToastProps = {
   id: string;
   message: string;
   type: "error" | "success";
+  onRemoveToast: (id: string) => void;
 };
 
-const Toast = ({ id, message, type }: ToastProps) => {
-  const dispatch = useDispatch();
-
+const Toast = ({ id, message, type, onRemoveToast }: ToastProps) => {
   useEffect(() => {
     const duration = type === "error" ? 10000 : 5000;
     const timer = setTimeout(() => {
-      dispatch(removeToast(id));
+      onRemoveToast(id);
     }, duration);
     return () => clearTimeout(timer);
-  }, [id, dispatch, type]);
+  }, [id, type, onRemoveToast]);
 
   return (
     <div className={`${styles.toast} ${styles[type]}`}>
       <span className={styles.message}>{message}</span>
       <button
         className={styles.closeBtn}
-        onClick={() => dispatch(removeToast(id))}
+        onClick={() => onRemoveToast(id)}
       >
         &times;
       </button>
@@ -33,4 +31,4 @@ const Toast = ({ id, message, type }: ToastProps) => {
   );
 };
 
-export default Toast;
+export { Toast };

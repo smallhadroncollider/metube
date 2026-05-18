@@ -1,6 +1,6 @@
 import { connect } from "react-redux";
 import type { RootState, AppDispatch } from "../../store/configureStore.js";
-import VideoList from "../VideoList.js";
+import { VideoList } from "./VideoList.js";
 import {
   sagaAddVideoRequested,
   sagaIgnoreVideoRequested,
@@ -25,4 +25,6 @@ const mapDispatch = (dispatch: AppDispatch) => ({
   onSync: () => dispatch(sagaSyncVideosRequested()),
 });
 
-export default connect(mapState, mapDispatch)(VideoList);
+const ConnectedVideoList = connect(mapState, mapDispatch)(VideoList);
+
+export { ConnectedVideoList as VideoList };

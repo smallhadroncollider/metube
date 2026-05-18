@@ -1,6 +1,6 @@
 import { connect } from "react-redux";
 import type { RootState, AppDispatch } from "../../store/configureStore.js";
-import SubscriptionManager from "../SubscriptionManager.js";
+import { SubscriptionManager } from "./SubscriptionManager.js";
 import {
   sagaSearchChannelsRequested,
   sagaSubscribeRequested,
@@ -26,4 +26,9 @@ const mapDispatch = (dispatch: AppDispatch) => ({
     dispatch(sagaUnsubscribeRequested(channelId)),
 });
 
-export default connect(mapState, mapDispatch)(SubscriptionManager);
+const ConnectedSubscriptionManager = connect(
+  mapState,
+  mapDispatch,
+)(SubscriptionManager);
+
+export { ConnectedSubscriptionManager as SubscriptionManager };
