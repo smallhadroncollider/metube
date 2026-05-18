@@ -20,8 +20,7 @@ const mapDispatch = (dispatch: AppDispatch) => ({
     dispatch(sagaAddVideoRequested({ videoId, channelId })),
   onIgnoreVideo: (videoId: string, channelId: string) =>
     dispatch(sagaIgnoreVideoRequested({ videoId, channelId })),
-  onIgnoreAllVideos: (videos: Array<{ videoId: string; channelId: string }>) =>
-    dispatch(sagaIgnoreAllVideosRequested({ videos })),
+  onIgnoreAllVideos: () => dispatch(sagaIgnoreAllVideosRequested()),
   onSync: () => dispatch(sagaSyncVideosRequested()),
 });
 

@@ -14,6 +14,7 @@ import {
   getVideoById,
   getUserTokens,
   bulkIgnoreVideos,
+  bulkIgnorePendingVideos,
   getLatestVideoDateForChannel,
 } from "../src/db/repo.js";
 
@@ -622,7 +623,7 @@ describe("Database Repository", () => {
       expect(video?.title).toBe("Video 8");
     });
 
-    it("should bulk ignore videos", () => {
+    it("should bulk ignore specific videos by channel and video id", () => {
       const user = createUser(
         db,
         "google-307",
@@ -638,6 +639,27 @@ describe("Database Repository", () => {
         "Video Channel 7",
         "https://thumb.com/vc7.jpg",
       );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos7",
+          videoId: "vid9",
+          title: "Video 9",
+          description: "Desc 9",
+          thumbnail: "https://thumb.com/v9.jpg",
+          duration: "PT10M00S",
+          publishedAt: "2024-01-01T00:00:00Z",
+        },
+        {
+          channelId: "UC_videos7",
+          videoId: "vid10",
+          title: "Video 10",
+          description: "Desc 10",
+          thumbnail: "https://thumb.com/v10.jpg",
+          duration: "PT12M00S",
+          publishedAt: "2024-01-02T00:00:00Z",
+        },
+      ]);
 
       bulkIgnoreVideos(db, [
         { channelId: "UC_videos7", videoId: "vid9" },
@@ -684,6 +706,137 @@ describe("Database Repository", () => {
 
       pending = getPendingVideos(db, user.id);
       expect(pending).toHaveLength(0);
+    });
+
+    it("should bulk ignore all pending videos for user", () => {
+      const user = createUser(
+        db,
+        "google-307",
+        "test15@test.com",
+        "Test User 15",
+        "https://pic.com/pic15.jpg",
+        "PL307",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos7",
+        "Video Channel 7",
+        "https://thumb.com/vc7.jpg",
+      );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos7",
+          videoId: "vid9",
+          title: "Video 9",
+          description: "Desc 9",
+          thumbnail: "https://thumb.com/v9.jpg",
+          duration: "PT10M00S",
+          publishedAt: "2024-01-01T00:00:00Z",
+        },
+        {
+          channelId: "UC_videos7",
+          videoId: "vid10",
+          title: "Video 10",
+          description: "Desc 10",
+          thumbnail: "https://thumb.com/v10.jpg",
+          duration: "PT12M00S",
+          publishedAt: "2024-01-02T00:00:00Z",
+        },
+      ]);
+
+      bulkIgnorePendingVideos(db, user.id);
+
+      const pending = getPendingVideos(db, user.id);
+      expect(pending).toHaveLength(0);
+    });
+
+    it("should not ignore non-pending videos via bulk ignore", () => {
+      const user = createUser(
+        db,
+        "google-308",
+        "test16@test.com",
+        "Test User 16",
+        "https://pic.com/pic16.jpg",
+        "PL308",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos8",
+        "Video Channel 8",
+        "https://thumb.com/vc8.jpg",
+      );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos8",
+          videoId: "vid11",
+          title: "Video 11",
+          description: "Desc 11",
+          thumbnail: "https://thumb.com/v11.jpg",
+          duration: "PT10M00S",
+          publishedAt: "2024-01-01T00:00:00Z",
+        },
+      ]);
+
+      updateVideoStatus(db, "vid11", "UC_videos8", "added");
+
+      bulkIgnorePendingVideos(db, user.id);
+
+      const pending = getPendingVideos(db, user.id);
+      expect(pending).toHaveLength(0);
+
+      const video = getVideoById(db, "vid11", "UC_videos8");
+      expect(video?.status).toBe("added");
+    });
+
+    it("should only ignore videos from user's subscriptions", () => {
+      const user = createUser(
+        db,
+        "google-308",
+        "test16@test.com",
+        "Test User 16",
+        "https://pic.com/pic16.jpg",
+        "PL308",
+      );
+      addSubscription(
+        db,
+        user.id,
+        "UC_videos8",
+        "Video Channel 8",
+        "https://thumb.com/vc8.jpg",
+      );
+
+      upsertVideos(db, [
+        {
+          channelId: "UC_videos8",
+          videoId: "vid11",
+          title: "Video 11",
+          description: "Desc 11",
+          thumbnail: "https://thumb.com/v11.jpg",
+          duration: "PT10M00S",
+          publishedAt: "2024-01-01T00:00:00Z",
+        },
+        {
+          channelId: "UC_other",
+          videoId: "vid12",
+          title: "Video 12",
+          description: "Desc 12",
+          thumbnail: "https://thumb.com/v12.jpg",
+          duration: "PT10M00S",
+          publishedAt: "2024-01-01T00:00:00Z",
+        },
+      ]);
+
+      bulkIgnorePendingVideos(db, user.id);
+
+      const pending = getPendingVideos(db, user.id);
+      expect(pending).toHaveLength(0);
+
+      const otherVideo = getVideoById(db, "vid12", "UC_other");
+      expect(otherVideo?.status).toBe("pending");
     });
 
     it("should get latest video date for channel", () => {

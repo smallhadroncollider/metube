@@ -262,3 +262,11 @@ export const bulkIgnoreVideos = (
   );
   bulkIgnore(videos);
 };
+
+export const bulkIgnorePendingVideos = (db: Database, userId: number): void => {
+  db.query(
+    `UPDATE videos SET status = 'ignored' WHERE channel_id IN (
+      SELECT channel_id FROM subscriptions WHERE user_id = ?
+    ) AND status = 'pending'`,
+  ).run(userId);
+};

@@ -11,9 +11,7 @@ type VideoListProps = {
   isSyncing: boolean;
   onAddVideo: (videoId: string, channelId: string) => void;
   onIgnoreVideo: (videoId: string, channelId: string) => void;
-  onIgnoreAllVideos: (
-    videos: Array<{ videoId: string; channelId: string }>,
-  ) => void;
+  onIgnoreAllVideos: () => void;
   onSync: () => void;
 };
 
@@ -35,14 +33,12 @@ const VideoList = ({
 
   const handleIgnoreAllClick = useCallback(() => {
     if (showConfirm) {
-      onIgnoreAllVideos(
-        videos.map((v) => ({ videoId: v.video_id, channelId: v.channel_id })),
-      );
+      onIgnoreAllVideos();
       setShowConfirm(false);
     } else {
       setShowConfirm(true);
     }
-  }, [showConfirm, videos, onIgnoreAllVideos]);
+  }, [showConfirm, onIgnoreAllVideos]);
 
   const hasVideos = videos.length > 0;
   const isDisabled = isSyncing || !hasVideos;

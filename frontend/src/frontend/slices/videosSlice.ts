@@ -55,14 +55,8 @@ export const sagaSyncChannelVideosSucceeded = createAction(
 export const sagaPeriodicFetchVideosRequested = createAction(
   "saga/videos/periodicFetchRequested",
 );
-export const sagaIgnoreAllVideosRequested = createAction<{
-  videos: Array<{ videoId: string; channelId: string }>;
-}>("saga/videos/ignoreAllRequested");
-export const sagaIgnoreAllVideosSucceeded = createAction<string[]>(
-  "saga/videos/ignoreAllSucceeded",
-);
-export const sagaIgnoreAllVideosFailed = createAction<string>(
-  "saga/videos/ignoreAllFailed",
+export const sagaIgnoreAllVideosRequested = createAction(
+  "saga/videos/ignoreAllRequested",
 );
 
 const videosSlice = createSlice({
@@ -109,14 +103,9 @@ const videosSlice = createSlice({
       .addCase(sagaSyncChannelVideosSucceeded, (state) => {
         state.isSyncing = false;
       })
-      .addCase(sagaIgnoreAllVideosSucceeded, (state, action) => {
-        const videoIdsToRemove = new Set(action.payload);
-        state.videos = state.videos.filter(
-          (v) => !videoIdsToRemove.has(v.video_id),
-        );
-      })
-      .addCase(sagaIgnoreAllVideosFailed, (state, action) => {
-        state.error = action.payload;
+      .addCase(sagaIgnoreAllVideosRequested, (state) => {
+        state.isLoading = true;
+        state.error = null;
       });
   },
 });

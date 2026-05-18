@@ -11,6 +11,7 @@ import {
   sagaIgnoreVideoSucceeded,
   sagaSyncChannelVideosRequested,
   sagaSyncChannelVideosSucceeded,
+  sagaIgnoreAllVideosRequested,
 } from "../src/frontend/slices/videosSlice.js";
 import type { Video } from "../src/frontend/types/index.js";
 
