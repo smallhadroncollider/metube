@@ -16,9 +16,6 @@ const OAuthTokensSchema = z.object({
 
 export type OAuthTokens = z.infer<typeof OAuthTokensSchema>;
 
-export const parseOAuthTokens = (data: unknown): OAuthTokens =>
-  OAuthTokensSchema.parse(data);
-
 export const createOAuth2ClientFromTokens = (
   clientId: string,
   clientSecret: string,
@@ -76,9 +73,6 @@ const DeviceAuthResponseSchema = z.object({
 
 export type DeviceAuthResponse = z.infer<typeof DeviceAuthResponseSchema>;
 
-export const parseDeviceAuthResponse = (data: unknown): DeviceAuthResponse =>
-  DeviceAuthResponseSchema.parse(data);
-
 export const requestDeviceAuthorization = async (
   clientId: string,
 ): Promise<DeviceAuthResponse> => {
@@ -118,10 +112,23 @@ export type DevicePollResponse =
   | { status: "slow_down" }
   | { status: "error"; error: string };
 
-export const parseDevicePollResponse = async (
-  response: Response,
-  data: unknown,
+export const pollDeviceToken = async (
+  clientId: string,
+  clientSecret: string,
+  deviceCode: string,
 ): Promise<DevicePollResponse> => {
+  const response = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: clientId,
+      client_secret: clientSecret,
+      device_code: deviceCode,
+      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+    }).toString(),
+  });
+
+  const data = await response.json();
   const errorData = DevicePollErrorSchema.safeParse(data);
   if (errorData.success) {
     const error = errorData.data.error;
@@ -149,24 +156,4 @@ export const parseDevicePollResponse = async (
       expiry_date: completeData.expiry_date ?? 0,
     },
   };
-};
-
-export const pollDeviceToken = async (
-  clientId: string,
-  clientSecret: string,
-  deviceCode: string,
-): Promise<DevicePollResponse> => {
-  const response = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: clientId,
-      client_secret: clientSecret,
-      device_code: deviceCode,
-      grant_type: "urn:ietf:params:oauth:grant-type:device_code",
-    }).toString(),
-  });
-
-  const data = await response.json();
-  return parseDevicePollResponse(response, data);
 };

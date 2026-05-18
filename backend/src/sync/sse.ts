@@ -15,7 +15,7 @@ const sendSseEvent = (message: string, data: string): void => {
   }
 };
 
-export const notifySyncComplete = (): void => {
+const notifySyncComplete = (): void => {
   sendSseEvent("sync_complete", "");
 };
 
@@ -57,9 +57,4 @@ export const addSseClient = (
   };
 
   res.on("close", handleClose);
-};
-
-export const removeSseClient = (client: SseClient): void => {
-  clearInterval(client.heartbeatInterval);
-  clients.delete(client);
 };

@@ -234,9 +234,3 @@ export const syncChannelVideos = (
 
 export const getUser = (): Promise<{ user: User; playlistId: string }> =>
   apiFetch("/user", z.object({ user: z.any(), playlistId: z.string() }));
-
-export const updatePlaylist = (playlistId: string): Promise<SuccessResponse> =>
-  apiFetch("/playlist", SuccessResponseSchema, {
-    method: "POST",
-    body: JSON.stringify({ playlistId }),
-  });

@@ -68,8 +68,8 @@ import type {
 } from "../api/types.js";
 import type { User } from "../types/index.js";
 
-export const sagaStartSse = createAction("saga/sse/start");
-export const sagaStopSse = createAction("saga/sse/stop");
+const sagaStartSse = createAction("saga/sse/start");
+const sagaStopSse = createAction("saga/sse/stop");
 
 let sseAbortController: AbortController | null = null;
 

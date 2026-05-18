@@ -96,4 +96,3 @@ export const initDb = (db: Database) => {
 };
 
 export const createDb = createDbFn;
-export default createDb;

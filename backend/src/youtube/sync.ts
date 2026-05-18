@@ -137,4 +137,4 @@ export const syncVideos = async (args: SyncVideosArgs): Promise<SyncResult> => {
   return { synced: withinRange.length, ignored: outOfRange.length };
 };
 
-export type { EnrichedVideo, SyncResult };
+export type { SyncResult };
