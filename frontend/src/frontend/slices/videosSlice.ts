@@ -58,6 +58,12 @@ export const sagaPeriodicFetchVideosRequested = createAction(
 export const sagaIgnoreAllVideosRequested = createAction<{
   videos: Array<{ videoId: string; channelId: string }>;
 }>("saga/videos/ignoreAllRequested");
+export const sagaIgnoreAllVideosSucceeded = createAction<string[]>(
+  "saga/videos/ignoreAllSucceeded",
+);
+export const sagaIgnoreAllVideosFailed = createAction<string>(
+  "saga/videos/ignoreAllFailed",
+);
 
 const videosSlice = createSlice({
   name: "videos",
@@ -102,6 +108,15 @@ const videosSlice = createSlice({
       })
       .addCase(sagaSyncChannelVideosSucceeded, (state) => {
         state.isSyncing = false;
+      })
+      .addCase(sagaIgnoreAllVideosSucceeded, (state, action) => {
+        const videoIdsToRemove = new Set(action.payload);
+        state.videos = state.videos.filter(
+          (v) => !videoIdsToRemove.has(v.video_id),
+        );
+      })
+      .addCase(sagaIgnoreAllVideosFailed, (state, action) => {
+        state.error = action.payload;
       });
   },
 });

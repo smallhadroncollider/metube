@@ -189,6 +189,14 @@ export const ignoreVideo = (
     body: JSON.stringify({ channelId }),
   });
 
+export const ignoreAllVideos = (
+  videos: Array<{ channelId: string; videoId: string }>,
+): Promise<SuccessResponse> =>
+  apiFetch("/videos/ignore-all", SuccessResponseSchema, {
+    method: "POST",
+    body: JSON.stringify({ videos }),
+  });
+
 export const getSubscriptions = (): Promise<SubscriptionsResponse> =>
   apiFetch("/subscriptions", SubscriptionsResponseSchema);
 

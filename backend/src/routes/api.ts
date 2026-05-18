@@ -9,6 +9,7 @@ import {
   removeSubscription,
   getPendingVideos,
   updateVideoStatus,
+  bulkIgnoreVideos,
   getUserById,
   updateUserPlaylist,
   getUserTokens,
@@ -128,6 +129,27 @@ export const apiRoutes = (db: Database): IRouter => {
     }
 
     updateVideoStatus(db, videoId, channelId, "ignored");
+    res.json({ success: true });
+  });
+
+  router.post("/videos/ignore-all", (req: Request, res: Response) => {
+    const body = req.body;
+    if (
+      typeof body !== "object" ||
+      body === null ||
+      !Array.isArray(body.videos)
+    ) {
+      res.status(400).json({ error: "Missing videos array" });
+      return;
+    }
+
+    const videos: Array<{ channelId: string; videoId: string }> =
+      body.videos.map((v: { channelId: string; videoId: string }) => ({
+        channelId: v.channelId,
+        videoId: v.videoId,
+      }));
+
+    bulkIgnoreVideos(db, videos);
     res.json({ success: true });
   });
 

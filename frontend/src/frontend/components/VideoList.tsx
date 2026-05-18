@@ -11,7 +11,9 @@ type VideoListProps = {
   isSyncing: boolean;
   onAddVideo: (videoId: string, channelId: string) => void;
   onIgnoreVideo: (videoId: string, channelId: string) => void;
-  onIgnoreAllVideos: (videos: Array<{ videoId: string; channelId: string }>) => void;
+  onIgnoreAllVideos: (
+    videos: Array<{ videoId: string; channelId: string }>,
+  ) => void;
   onSync: () => void;
 };
 
@@ -50,7 +52,9 @@ const VideoList = ({
         <h2>New Videos</h2>
         <div className={styles.headerActions}>
           <button
-            className={showConfirm ? styles.ignoreAllSureBtn : styles.ignoreAllBtn}
+            className={
+              showConfirm ? styles.ignoreAllSureBtn : styles.ignoreAllBtn
+            }
             onClick={handleIgnoreAllClick}
             disabled={isDisabled}
           >

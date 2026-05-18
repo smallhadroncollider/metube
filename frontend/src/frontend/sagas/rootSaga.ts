@@ -27,6 +27,8 @@ import {
   sagaSyncChannelVideosRequested,
   sagaSyncChannelVideosSucceeded,
   sagaIgnoreAllVideosRequested,
+  sagaIgnoreAllVideosSucceeded,
+  sagaIgnoreAllVideosFailed,
 } from "../slices/videosSlice.js";
 import { addToast } from "../slices/toastsSlice.js";
 import {
@@ -234,8 +236,15 @@ function* ignoreVideo(action: {
 function* ignoreAllVideos(action: {
   payload: { videos: Array<{ videoId: string; channelId: string }> };
 }): Generator<CallEffect | PutEffect, void, void> {
-  for (const { videoId, channelId } of action.payload.videos) {
-    yield put(sagaIgnoreVideoRequested({ videoId, channelId }));
+  try {
+    yield call(api.ignoreAllVideos, action.payload.videos);
+    yield put(
+      sagaIgnoreAllVideosSucceeded(
+        action.payload.videos.map((v) => v.videoId),
+      ),
+    );
+  } catch (error) {
+    yield put(sagaIgnoreAllVideosFailed((error as Error).message));
   }
 }
 
