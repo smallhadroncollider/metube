@@ -1,9 +1,11 @@
 import type { Video } from "../../types/index.js";
+import { Avatar } from "../Avatar/index.js";
 import styles from "./VideoCard.module.scss";
 
 type VideoCardProps = {
   video: Video;
   channelThumbnail: string | null;
+  channelTitle: string;
   onAdd: () => void;
   onIgnore: () => void;
 };
@@ -36,6 +38,7 @@ const formatDate = (dateString: string): string => {
 const VideoCard = ({
   video,
   channelThumbnail,
+  channelTitle,
   onAdd,
   onIgnore,
 }: VideoCardProps) => {
@@ -49,11 +52,13 @@ const VideoCard = ({
       <div className={styles.content}>
         <div className={styles.thumbnailWrapper}>
           {channelThumbnail && (
-            <img
-              src={channelThumbnail}
-              alt={video.title}
-              className={styles.channelLogo}
-            />
+            <div className={styles.channelLogoWrapper}>
+              <Avatar
+                src={channelThumbnail}
+                alt={channelTitle}
+                className={styles.channelLogo}
+              />
+            </div>
           )}
           <img
             src={video.thumbnail}

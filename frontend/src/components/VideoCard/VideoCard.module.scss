@@ -30,14 +30,14 @@
 }
 
 .channelLogo {
+  border-radius: 50%;
+  z-index: 1;
+}
+
+.channelLogoWrapper {
   position: absolute;
   top: 8px;
   left: 8px;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: rgba(0, 0, 0, 0.6);
-  padding: 2px;
   z-index: 1;
 }
 

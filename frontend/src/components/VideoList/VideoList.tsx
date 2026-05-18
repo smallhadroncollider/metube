@@ -62,9 +62,13 @@ const VideoList = ({
     return `Sync Channels (${seconds}s)`;
   }, [isSyncing, nextSyncAt, showConfirm]);
 
-  const getChannelThumbnail = (channelId: string): string | null =>
-    subscriptions.find((s) => s.channel_id === channelId)?.channel_thumbnail ??
-    null;
+  const getChannelInfo = (channelId: string) => {
+    const sub = subscriptions.find((s) => s.channel_id === channelId);
+    return {
+      thumbnail: sub?.channel_thumbnail ?? null,
+      title: sub?.channel_title ?? "",
+    };
+  };
 
   const handleIgnoreAllClick = useCallback(() => {
     if (showConfirm) {
@@ -113,15 +117,19 @@ const VideoList = ({
         </div>
       ) : (
         <div className={styles.cards}>
-          {videos.map((video) => (
-            <VideoCard
-              key={video.video_id}
-              video={video}
-              channelThumbnail={getChannelThumbnail(video.channel_id)}
-              onAdd={() => onAddVideo(video.video_id, video.channel_id)}
-              onIgnore={() => onIgnoreVideo(video.video_id, video.channel_id)}
-            />
-          ))}
+          {videos.map((video) => {
+            const { thumbnail, title } = getChannelInfo(video.channel_id);
+            return (
+              <VideoCard
+                key={video.video_id}
+                video={video}
+                channelThumbnail={thumbnail}
+                channelTitle={title}
+                onAdd={() => onAddVideo(video.video_id, video.channel_id)}
+                onIgnore={() => onIgnoreVideo(video.video_id, video.channel_id)}
+              />
+            );
+          })}
         </div>
       )}
     </div>
