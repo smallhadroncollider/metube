@@ -4,6 +4,7 @@ import VideoList from "../VideoList.js";
 import {
   sagaAddVideoRequested,
   sagaIgnoreVideoRequested,
+  sagaIgnoreAllVideosRequested,
   sagaSyncVideosRequested,
 } from "../../slices/videosSlice.js";
 
@@ -19,6 +20,8 @@ const mapDispatch = (dispatch: AppDispatch) => ({
     dispatch(sagaAddVideoRequested({ videoId, channelId })),
   onIgnoreVideo: (videoId: string, channelId: string) =>
     dispatch(sagaIgnoreVideoRequested({ videoId, channelId })),
+  onIgnoreAllVideos: (videos: Array<{ videoId: string; channelId: string }>) =>
+    dispatch(sagaIgnoreAllVideosRequested({ videos })),
   onSync: () => dispatch(sagaSyncVideosRequested()),
 });
 

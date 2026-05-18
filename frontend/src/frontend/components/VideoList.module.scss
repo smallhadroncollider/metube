@@ -14,7 +14,14 @@
   }
 }
 
-.syncBtn {
+.headerActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.syncBtn,
+.ignoreAllBtn {
   background: rgba(99, 102, 241, 0.1);
   color: #6366f1;
   padding: 6px 12px;
@@ -33,6 +40,35 @@
 
     &:hover {
       background: rgba(99, 102, 241, 0.1);
+    }
+  }
+
+  @media (max-width: 768px) {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+}
+
+.ignoreAllSureBtn {
+  background: rgba(220, 38, 38, 0.15);
+  color: #dc2626;
+  padding: 6px 12px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+
+  &:hover {
+    background: rgba(220, 38, 38, 0.25);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+
+    &:hover {
+      background: rgba(220, 38, 38, 0.15);
     }
   }
 

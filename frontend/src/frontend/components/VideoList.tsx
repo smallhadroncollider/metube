@@ -1,3 +1,5 @@
+import { useState, useCallback } from "react";
+
 import type { Video, Subscription } from "../types/index.js";
 import VideoCard from "./VideoCard.js";
 import styles from "./VideoList.module.scss";
@@ -9,6 +11,7 @@ type VideoListProps = {
   isSyncing: boolean;
   onAddVideo: (videoId: string, channelId: string) => void;
   onIgnoreVideo: (videoId: string, channelId: string) => void;
+  onIgnoreAllVideos: (videos: Array<{ videoId: string; channelId: string }>) => void;
   onSync: () => void;
 };
 
@@ -19,23 +22,49 @@ const VideoList = ({
   isSyncing,
   onAddVideo,
   onIgnoreVideo,
+  onIgnoreAllVideos,
   onSync,
 }: VideoListProps) => {
+  const [showConfirm, setShowConfirm] = useState(false);
+
   const getChannelThumbnail = (channelId: string): string | null =>
     subscriptions.find((s) => s.channel_id === channelId)?.channel_thumbnail ??
     null;
+
+  const handleIgnoreAllClick = useCallback(() => {
+    if (showConfirm) {
+      onIgnoreAllVideos(
+        videos.map((v) => ({ videoId: v.video_id, channelId: v.channel_id })),
+      );
+      setShowConfirm(false);
+    } else {
+      setShowConfirm(true);
+    }
+  }, [showConfirm, videos, onIgnoreAllVideos]);
+
+  const hasVideos = videos.length > 0;
+  const isDisabled = isSyncing || !hasVideos;
   return (
     <div className={styles.list}>
       <div className={styles.header}>
         <h2>New Videos</h2>
-        <button
-          className={styles.syncBtn}
-          onClick={onSync}
-          disabled={isSyncing}
-        >
-          {isSyncing && <span className={styles.spinner} />}
-          {isSyncing ? "Syncing..." : "Sync Channels"}
-        </button>
+        <div className={styles.headerActions}>
+          <button
+            className={showConfirm ? styles.ignoreAllSureBtn : styles.ignoreAllBtn}
+            onClick={handleIgnoreAllClick}
+            disabled={isDisabled}
+          >
+            {showConfirm ? "Sure?" : "Ignore All"}
+          </button>
+          <button
+            className={styles.syncBtn}
+            onClick={onSync}
+            disabled={isSyncing}
+          >
+            {isSyncing && <span className={styles.spinner} />}
+            {isSyncing ? "Syncing..." : "Sync Channels"}
+          </button>
+        </div>
       </div>
 
       {isLoading ? (

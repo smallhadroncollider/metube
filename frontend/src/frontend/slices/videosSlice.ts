@@ -55,6 +55,9 @@ export const sagaSyncChannelVideosSucceeded = createAction(
 export const sagaPeriodicFetchVideosRequested = createAction(
   "saga/videos/periodicFetchRequested",
 );
+export const sagaIgnoreAllVideosRequested = createAction<{
+  videos: Array<{ videoId: string; channelId: string }>;
+}>("saga/videos/ignoreAllRequested");
 
 const videosSlice = createSlice({
   name: "videos",

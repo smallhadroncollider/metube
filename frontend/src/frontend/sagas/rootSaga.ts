@@ -26,6 +26,7 @@ import {
   sagaSyncVideosSucceeded,
   sagaSyncChannelVideosRequested,
   sagaSyncChannelVideosSucceeded,
+  sagaIgnoreAllVideosRequested,
 } from "../slices/videosSlice.js";
 import { addToast } from "../slices/toastsSlice.js";
 import {
@@ -230,6 +231,14 @@ function* ignoreVideo(action: {
   }
 }
 
+function* ignoreAllVideos(action: {
+  payload: { videos: Array<{ videoId: string; channelId: string }> };
+}): Generator<CallEffect | PutEffect, void, void> {
+  for (const { videoId, channelId } of action.payload.videos) {
+    yield put(sagaIgnoreVideoRequested({ videoId, channelId }));
+  }
+}
+
 function* syncVideos(): Generator<CallEffect | PutEffect, void, SyncResponse> {
   try {
     yield call(api.syncVideos);
@@ -336,6 +345,7 @@ export default function* rootSaga(): Generator<unknown, void, unknown> {
     takeEvery(sagaPeriodicFetchVideosRequested, (_action) => call(fetchVideos)),
     takeEvery(sagaAddVideoRequested, addVideo),
     takeEvery(sagaIgnoreVideoRequested, ignoreVideo),
+    takeEvery(sagaIgnoreAllVideosRequested, ignoreAllVideos),
     takeEvery(sagaSyncVideosRequested, syncVideos),
     takeEvery(sagaSyncChannelVideosRequested, syncChannelVideos),
     takeEvery(sagaFetchSubscriptionsStarted, fetchSubscriptions),
