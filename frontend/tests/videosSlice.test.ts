@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { configureStore } from "@reduxjs/toolkit";
-import videosReducer from "../src/frontend/slices/videosSlice.js";
+import videosReducer from "../src/slices/videosSlice.js";
 import {
   sagaFetchVideosStarted,
   sagaFetchVideosSucceeded,
@@ -12,8 +12,8 @@ import {
   sagaSyncChannelVideosSucceeded,
   sagaSyncScheduleUpdated,
   sagaPeriodicFetchVideosRequested,
-} from "../src/frontend/slices/videosSlice.js";
-import type { Video } from "../src/frontend/types/index.js";
+} from "../src/slices/videosSlice.js";
+import type { Video } from "../src/types/index.js";
 
 const mockVideos: Video[] = [
   {

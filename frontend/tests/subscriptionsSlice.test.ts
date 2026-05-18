@@ -1,14 +1,14 @@
 import { describe, it, expect } from "bun:test";
 import { configureStore } from "@reduxjs/toolkit";
-import subscriptionsReducer from "../src/frontend/slices/subscriptionsSlice.js";
+import subscriptionsReducer from "../src/slices/subscriptionsSlice.js";
 import {
   sagaFetchSubscriptionsStarted,
   sagaFetchSubscriptionsSucceeded,
   sagaSearchChannelsSucceeded,
   sagaSubscribeSucceeded,
   sagaUnsubscribeSucceeded,
-} from "../src/frontend/slices/subscriptionsSlice.js";
-import type { Subscription, ApiChannel } from "../src/frontend/types/index.js";
+} from "../src/slices/subscriptionsSlice.js";
+import type { Subscription, ApiChannel } from "../src/types/index.js";
 
 const mockSubscriptions: Subscription[] = [
   {

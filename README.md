@@ -138,7 +138,7 @@ bun run test:frontend
 │   │   └── youtube/       # YouTube API integration
 │   └── tests/             # Backend tests
 ├── frontend/
-│   ├── src/frontend/
+│   ├── src/
 │   │   ├── api/           # API client
 │   │   ├── components/    # React components (subdirectory per component)
 │   │   │   ├── App/       # App wrapper (connect + initialization)
@@ -162,6 +162,7 @@ bun run test:frontend
 ```
 
 Each component lives in a subdirectory with three files:
+
 - `index.ts` or `index.tsx` — connected wrapper (or re-export for non-Redux components)
 - `ComponentName.tsx` — presentational component (pure, receives props)
 - `ComponentName.module.scss` — scoped styles

@@ -15,13 +15,8 @@
     "noUncheckedSideEffectImports": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/frontend/*"]
+      "@/*": ["src/*"]
     }
   },
-  "include": [
-    "src/frontend/**/*.ts",
-    "src/frontend/**/*.tsx",
-    "tests/**/*.ts",
-    "tests/**/*.tsx"
-  ]
+  "include": ["src/**/*.ts", "src/**/*.tsx", "tests/**/*.ts", "tests/**/*.tsx"]
 }

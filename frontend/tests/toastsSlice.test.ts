@@ -1,7 +1,7 @@
 import { describe, it, expect } from "bun:test";
 import { configureStore } from "@reduxjs/toolkit";
-import toastsReducer from "../src/frontend/slices/toastsSlice.js";
-import { addToast, removeToast } from "../src/frontend/slices/toastsSlice.js";
+import toastsReducer from "../src/slices/toastsSlice.js";
+import { addToast, removeToast } from "../src/slices/toastsSlice.js";
 
 describe("Toasts Slice", () => {
   it("should have correct initial state", () => {

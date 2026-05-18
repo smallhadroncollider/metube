@@ -21,10 +21,7 @@ const Toast = ({ id, message, type, onRemoveToast }: ToastProps) => {
   return (
     <div className={`${styles.toast} ${styles[type]}`}>
       <span className={styles.message}>{message}</span>
-      <button
-        className={styles.closeBtn}
-        onClick={() => onRemoveToast(id)}
-      >
+      <button className={styles.closeBtn} onClick={() => onRemoveToast(id)}>
         &times;
       </button>
     </div>

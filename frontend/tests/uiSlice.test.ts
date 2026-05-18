@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from "bun:test";
 import { configureStore } from "@reduxjs/toolkit";
-import uiReducer from "../src/frontend/slices/uiSlice.js";
-import { toggleDarkMode } from "../src/frontend/slices/uiSlice.js";
+import uiReducer from "../src/slices/uiSlice.js";
+import { toggleDarkMode } from "../src/slices/uiSlice.js";
 
 const mockLocalStorage = () => {
   const store = new Map<string, string>();

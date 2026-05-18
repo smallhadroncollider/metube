@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
 import { configureStore } from "@reduxjs/toolkit";
-import authReducer from "../src/frontend/slices/authSlice.js";
+import authReducer from "../src/slices/authSlice.js";
 import {
   sagaCheckAuthStarted,
   sagaCheckAuthSucceeded,
@@ -10,8 +10,8 @@ import {
   sagaDeviceAuthRequested,
   sagaDeviceAuthPolling,
   sagaDeviceAuthFailed,
-} from "../src/frontend/slices/authSlice.js";
-import type { User } from "../src/frontend/types/index.js";
+} from "../src/slices/authSlice.js";
+import type { User } from "../src/types/index.js";
 
 const mockUser: User = {
   id: 1,
