@@ -37,7 +37,10 @@ const SearchSnippetSchema = z.object({
   thumbnails: z
     .object({
       default: ThumbnailSchema.optional(),
+      medium: ThumbnailSchema.optional(),
       high: ThumbnailSchema.optional(),
+      standard: ThumbnailSchema.optional(),
+      maxres: ThumbnailSchema.optional(),
     })
     .strict(),
   channelThumbnails: z
@@ -59,7 +62,10 @@ const PlaylistItemSnippetSchema = z.object({
   thumbnails: z
     .object({
       default: ThumbnailSchema.optional(),
+      medium: ThumbnailSchema.optional(),
       high: ThumbnailSchema.optional(),
+      standard: ThumbnailSchema.optional(),
+      maxres: ThumbnailSchema.optional(),
     })
     .strict(),
 });

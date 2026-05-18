@@ -216,6 +216,55 @@ describe("YouTube API", () => {
       }
     });
 
+    it("should accept all YouTube thumbnail sizes", async () => {
+      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
+        input: unknown,
+      ) => {
+        const url = typeof input === "string" ? input : (input as Request).url;
+
+        if (url.includes("/playlistItems")) {
+          return Promise.resolve(
+            new Response(
+              JSON.stringify({
+                items: [
+                  {
+                    snippet: {
+                      title: "All Thumbnails",
+                      description: "Has all thumbnail sizes",
+                      publishedAt: "2024-01-01T00:00:00Z",
+                      thumbnails: {
+                        default: { url: "https://thumb.com/default.jpg" },
+                        medium: { url: "https://thumb.com/medium.jpg" },
+                        high: { url: "https://thumb.com/high.jpg" },
+                        standard: { url: "https://thumb.com/standard.jpg" },
+                        maxres: { url: "https://thumb.com/maxres.jpg" },
+                      },
+                    },
+                    contentDetails: { videoId: "vid1" },
+                  },
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              },
+            ),
+          );
+        }
+
+        return Promise.resolve(new Response("Not Found", { status: 404 }));
+      }) as FetchMockFn);
+
+      try {
+        const videos = await getChannelVideos("fake-key", "UCchannel123");
+        expect(videos).toHaveLength(1);
+        expect(videos[0]?.videoId).toBe("vid1");
+        expect(videos[0]?.title).toBe("All Thumbnails");
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+
     it("should skip items with missing videoId", async () => {
       const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
         input: unknown,
