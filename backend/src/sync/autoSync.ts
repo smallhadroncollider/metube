@@ -15,6 +15,15 @@ const getRefreshIntervalMinutes = (): number => {
   return parsed;
 };
 
+const shouldSyncOnStart = (): boolean => {
+  const value = process.env.SYNC_ON_START;
+  if (value === undefined) {
+    return true;
+  }
+  const lower = value.toLowerCase();
+  return lower !== "0" && lower !== "false" && lower !== "off";
+};
+
 const getApiKey = (): string => process.env.YOUTUBE_API_KEY ?? "";
 
 const getUserId = (db: Database): number | null => {
@@ -30,12 +39,12 @@ const startSyncTimer = (
   onSyncStart?: () => void,
   onSyncComplete?: (result: { synced: number; ignored: number }) => void,
   onSyncError?: (error: unknown) => void,
-): void => {
+): Promise<void> => {
   const userId = getUserId(db);
 
   if (!userId) {
     console.log("[auto-sync] No users found; auto-sync disabled");
-    return;
+    return Promise.resolve();
   }
 
   const intervalMs = getRefreshIntervalMinutes() * 60 * 1000;
@@ -68,8 +77,13 @@ const startSyncTimer = (
     }
   };
 
-  performSync();
   syncIntervalId = setInterval(performSync, intervalMs);
+
+  if (shouldSyncOnStart()) {
+    return performSync();
+  }
+
+  return Promise.resolve();
 };
 
 const stopSyncTimer = (): void => {

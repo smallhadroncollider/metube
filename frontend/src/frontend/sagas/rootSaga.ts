@@ -239,9 +239,7 @@ function* ignoreAllVideos(action: {
   try {
     yield call(api.ignoreAllVideos, action.payload.videos);
     yield put(
-      sagaIgnoreAllVideosSucceeded(
-        action.payload.videos.map((v) => v.videoId),
-      ),
+      sagaIgnoreAllVideosSucceeded(action.payload.videos.map((v) => v.videoId)),
     );
   } catch (error) {
     yield put(sagaIgnoreAllVideosFailed((error as Error).message));
