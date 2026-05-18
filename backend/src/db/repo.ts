@@ -270,3 +270,23 @@ export const bulkIgnorePendingVideos = (db: Database, userId: number): void => {
     ) AND status = 'pending'`,
   ).run(userId);
 };
+
+const queryOneSetting = (result: unknown): { value: string } | null =>
+  result as { value: string } | null;
+
+export const getAppSetting = (db: Database, key: string): string | null => {
+  const row = queryOneSetting(
+    db.query("SELECT value FROM app_settings WHERE key = ?").get(key),
+  );
+  return row?.value ?? null;
+};
+
+export const setAppSetting = (
+  db: Database,
+  key: string,
+  value: string,
+): void => {
+  db.query(
+    "INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)",
+  ).run(key, value);
+};

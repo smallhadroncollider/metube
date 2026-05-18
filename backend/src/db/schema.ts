@@ -86,6 +86,13 @@ export const initDb = (db: Database) => {
       UNIQUE(channel_id, video_id)
     )
   `);
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS app_settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT ''
+    )
+  `);
 };
 
 export const createDb = createDbFn;

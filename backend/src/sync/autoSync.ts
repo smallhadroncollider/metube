@@ -1,9 +1,12 @@
 import type { Database } from "bun:sqlite";
+import { getAppSetting, setAppSetting } from "../db/repo.js";
 
 let syncIntervalId: ReturnType<typeof setInterval> | null = null;
 let isSyncing = false;
 
-const getRefreshIntervalMinutes = (): number => {
+const SYNC_SCHEDULE_KEY = "next_sync_at";
+
+export const getRefreshIntervalMinutes = (): number => {
   const value = process.env.REFRESH_INTERVAL_MINUTES;
   if (!value) {
     return 60;
@@ -39,6 +42,7 @@ const startSyncTimer = (
   onSyncStart?: () => void,
   onSyncComplete?: (result: { synced: number; ignored: number }) => void,
   onSyncError?: (error: unknown) => void,
+  onSyncSchedule?: (nextSyncAt: string) => void,
 ): Promise<void> => {
   const userId = getUserId(db);
 
@@ -68,7 +72,10 @@ const startSyncTimer = (
       console.log(
         `[auto-sync] Sync complete: ${result.synced} synced, ${result.ignored} ignored`,
       );
+      const nextSyncAt = new Date(Date.now() + intervalMs).toISOString();
+      setAppSetting(db, SYNC_SCHEDULE_KEY, nextSyncAt);
       onSyncComplete?.(result);
+      onSyncSchedule?.(nextSyncAt);
     } catch (error) {
       console.error("[auto-sync] Sync failed:", error);
       onSyncError?.(error);
@@ -97,4 +104,13 @@ const stopSyncTimer = (): void => {
 
 const isSyncActive = (): boolean => syncIntervalId !== null;
 
-export { startSyncTimer, stopSyncTimer, isSyncActive };
+const getNextSyncAt = (db: Database): string | null =>
+  getAppSetting(db, SYNC_SCHEDULE_KEY);
+
+export {
+  startSyncTimer,
+  stopSyncTimer,
+  isSyncActive,
+  isSyncing,
+  getNextSyncAt,
+};

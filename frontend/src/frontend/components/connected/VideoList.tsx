@@ -13,6 +13,7 @@ const mapState = (state: RootState) => ({
   subscriptions: state.subscriptions.subscriptions,
   isLoading: state.videos.isLoading,
   isSyncing: state.videos.isSyncing,
+  nextSyncAt: state.videos.nextSyncAt,
 });
 
 const mapDispatch = (dispatch: AppDispatch) => ({

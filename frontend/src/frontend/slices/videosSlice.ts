@@ -5,6 +5,7 @@ type VideosState = {
   videos: Video[];
   isLoading: boolean;
   isSyncing: boolean;
+  nextSyncAt: string | null;
   error: string | null;
 };
 
@@ -12,6 +13,7 @@ const initialState: VideosState = {
   videos: [],
   isLoading: false,
   isSyncing: false,
+  nextSyncAt: null,
   error: null,
 };
 
@@ -57,6 +59,9 @@ export const sagaPeriodicFetchVideosRequested = createAction(
 );
 export const sagaIgnoreAllVideosRequested = createAction(
   "saga/videos/ignoreAllRequested",
+);
+export const sagaSyncScheduleUpdated = createAction<string | null>(
+  "saga/videos/syncScheduleUpdated",
 );
 
 const videosSlice = createSlice({
@@ -106,6 +111,9 @@ const videosSlice = createSlice({
       .addCase(sagaIgnoreAllVideosRequested, (state) => {
         state.isLoading = true;
         state.error = null;
+      })
+      .addCase(sagaSyncScheduleUpdated, (state, action) => {
+        state.nextSyncAt = action.payload;
       });
   },
 });

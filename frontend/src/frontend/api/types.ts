@@ -21,6 +21,8 @@ export type DevicePollResponse =
 
 export type VideosResponse = {
   videos: Video[];
+  next_sync_at: string | null;
+  is_syncing: boolean;
 };
 
 export type SubscriptionsResponse = {

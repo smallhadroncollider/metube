@@ -1,5 +1,5 @@
 import "dotenv/config";
-import express from "express";
+import express, { type Request, type Response } from "express";
 import session from "express-session";
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -9,12 +9,23 @@ import { Database } from "bun:sqlite";
 import { initDb } from "./db/schema.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
-import { startSyncTimer } from "./sync/autoSync.js";
+import { startSyncTimer, getRefreshIntervalMinutes } from "./sync/autoSync.js";
+import { addSseClient, notifySyncSchedule } from "./sync/sse.js";
+import { getAppSetting, setAppSetting } from "./db/repo.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const db = new Database(path.resolve(__dirname, "../../data.db"));
 initDb(db);
+
+const initializeSyncSchedule = (): void => {
+  const intervalMs = getRefreshIntervalMinutes() * 60 * 1000;
+  const scheduledAt = new Date(Date.now() + intervalMs).toISOString();
+  setAppSetting(db, "next_sync_at", scheduledAt);
+  console.log(`[auto-sync] Set next_sync_at on startup: ${scheduledAt}`);
+};
+
+initializeSyncSchedule();
 
 const createSessionStore = (db: Database): session.Store => {
   db.run(`
@@ -77,6 +88,11 @@ app.use(
 );
 
 app.use("/auth", authRoutes(db));
+
+app.get("/api/sync/sse", (_req: Request, res: Response) => {
+  addSseClient(db, res, () => {});
+});
+
 app.use("/api", apiRoutes(db));
 
 // Serve frontend in production
@@ -89,5 +105,5 @@ if (process.env.NODE_ENV === "production") {
 
 app.listen(parseInt(port, 10), () => {
   console.log(`Server running on port ${port}`);
-  startSyncTimer(db);
+  startSyncTimer(db, undefined, undefined, undefined, notifySyncSchedule);
 });

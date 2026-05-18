@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 
 import type { Video, Subscription } from "../types/index.js";
 import VideoCard from "./VideoCard.js";
@@ -9,6 +9,7 @@ type VideoListProps = {
   subscriptions: Subscription[];
   isLoading: boolean;
   isSyncing: boolean;
+  nextSyncAt: string | null;
   onAddVideo: (videoId: string, channelId: string) => void;
   onIgnoreVideo: (videoId: string, channelId: string) => void;
   onIgnoreAllVideos: () => void;
@@ -20,12 +21,47 @@ const VideoList = ({
   subscriptions,
   isLoading,
   isSyncing,
+  nextSyncAt,
   onAddVideo,
   onIgnoreVideo,
   onIgnoreAllVideos,
   onSync,
 }: VideoListProps) => {
   const [showConfirm, setShowConfirm] = useState(false);
+  const [, setTick] = useState(0);
+
+  const SYNC_WITHIN_THRESHOLD_MS = 5 * 60 * 1000;
+
+  useEffect(() => {
+    if (!nextSyncAt) {
+      return;
+    }
+
+    const interval = setInterval(() => setTick((t) => t + 1), 1000);
+
+    return () => clearInterval(interval);
+  }, [nextSyncAt]);
+
+  const formatSyncButtonLabel = useCallback(() => {
+    if (isSyncing) {
+      return "Syncing...";
+    }
+
+    if (!nextSyncAt) {
+      return "Sync Channels";
+    }
+
+    const nextSyncTime = new Date(nextSyncAt).getTime();
+    const now = Date.now();
+    const remaining = nextSyncTime - now;
+
+    if (remaining > SYNC_WITHIN_THRESHOLD_MS) {
+      return "Sync Channels";
+    }
+
+    const seconds = Math.max(0, Math.ceil(remaining / 1000));
+    return `Sync Channels (${seconds}s)`;
+  }, [isSyncing, nextSyncAt, showConfirm]);
 
   const getChannelThumbnail = (channelId: string): string | null =>
     subscriptions.find((s) => s.channel_id === channelId)?.channel_thumbnail ??
@@ -62,7 +98,7 @@ const VideoList = ({
             disabled={isSyncing}
           >
             {isSyncing && <span className={styles.spinner} />}
-            {isSyncing ? "Syncing..." : "Sync Channels"}
+            {formatSyncButtonLabel()}
           </button>
         </div>
       </div>

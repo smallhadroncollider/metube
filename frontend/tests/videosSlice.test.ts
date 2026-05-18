@@ -5,13 +5,13 @@ import {
   sagaFetchVideosStarted,
   sagaFetchVideosSucceeded,
   sagaFetchVideosFailed,
-  sagaPeriodicFetchVideosRequested,
   sagaAddVideoSucceeded,
   sagaAddVideoFailed,
   sagaIgnoreVideoSucceeded,
   sagaSyncChannelVideosRequested,
   sagaSyncChannelVideosSucceeded,
-  sagaIgnoreAllVideosRequested,
+  sagaSyncScheduleUpdated,
+  sagaPeriodicFetchVideosRequested,
 } from "../src/frontend/slices/videosSlice.js";
 import type { Video } from "../src/frontend/types/index.js";
 
@@ -46,10 +46,18 @@ describe("Videos Slice", () => {
   it("should have correct initial state", () => {
     const store = configureStore({ reducer: { videos: videosReducer } });
     const state = store.getState() as {
-      videos: { videos: Video[]; isLoading: boolean; error: string | null };
+      videos: {
+        videos: Video[];
+        isLoading: boolean;
+        isSyncing: boolean;
+        nextSyncAt: string | null;
+        error: string | null;
+      };
     };
     expect(state.videos.videos).toEqual([]);
     expect(state.videos.isLoading).toBe(false);
+    expect(state.videos.isSyncing).toBe(false);
+    expect(state.videos.nextSyncAt).toBeNull();
     expect(state.videos.error).toBeNull();
   });
 
@@ -134,6 +142,21 @@ describe("Videos Slice", () => {
     store.dispatch(sagaSyncChannelVideosSucceeded());
     const state = store.getState() as { videos: { isSyncing: boolean } };
     expect(state.videos.isSyncing).toBe(false);
+  });
+
+  it("should update next sync at on sync schedule update", () => {
+    const store = configureStore({ reducer: { videos: videosReducer } });
+    store.dispatch(sagaSyncScheduleUpdated("2024-01-01T00:10:00Z"));
+    const state = store.getState() as { videos: { nextSyncAt: string | null } };
+    expect(state.videos.nextSyncAt).toBe("2024-01-01T00:10:00Z");
+  });
+
+  it("should clear next sync at on null", () => {
+    const store = configureStore({ reducer: { videos: videosReducer } });
+    store.dispatch(sagaSyncScheduleUpdated("2024-01-01T00:10:00Z"));
+    store.dispatch(sagaSyncScheduleUpdated(null));
+    const state = store.getState() as { videos: { nextSyncAt: string | null } };
+    expect(state.videos.nextSyncAt).toBeNull();
   });
 
   it("should handle periodic fetch action type", () => {

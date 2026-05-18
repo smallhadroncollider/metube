@@ -1,5 +1,19 @@
-import { takeEvery, put, call, all, delay, fork } from "redux-saga/effects";
-import type { CallEffect, ForkEffect, PutEffect } from "redux-saga/effects";
+import {
+  takeEvery,
+  put,
+  call,
+  all,
+  delay,
+  fork,
+  cancelled,
+} from "redux-saga/effects";
+import { createAction } from "@reduxjs/toolkit";
+import type {
+  CallEffect,
+  ForkEffect,
+  PutEffect,
+  Effect,
+} from "redux-saga/effects";
 import {
   sagaCheckAuthStarted,
   sagaCheckAuthSucceeded,
@@ -16,7 +30,6 @@ import {
   sagaFetchVideosStarted,
   sagaFetchVideosSucceeded,
   sagaFetchVideosFailed,
-  sagaPeriodicFetchVideosRequested,
   sagaAddVideoRequested,
   sagaAddVideoSucceeded,
   sagaAddVideoFailed,
@@ -27,6 +40,7 @@ import {
   sagaSyncChannelVideosRequested,
   sagaSyncChannelVideosSucceeded,
   sagaIgnoreAllVideosRequested,
+  sagaSyncScheduleUpdated,
 } from "../slices/videosSlice.js";
 import { addToast } from "../slices/toastsSlice.js";
 import {
@@ -54,6 +68,11 @@ import type {
 } from "../api/types.js";
 import type { User } from "../types/index.js";
 
+export const sagaStartSse = createAction("saga/sse/start");
+export const sagaStopSse = createAction("saga/sse/stop");
+
+let sseAbortController: AbortController | null = null;
+
 function* checkAuth(): Generator<CallEffect | PutEffect, void, never> {
   try {
     const status = (yield call(api.checkAuthStatus)) as AuthStatus;
@@ -65,6 +84,7 @@ function* checkAuth(): Generator<CallEffect | PutEffect, void, never> {
       yield put(sagaCheckAuthSucceeded(userResponse.user));
       yield put(sagaFetchVideosStarted());
       yield put(sagaFetchSubscriptionsStarted());
+      yield put(sagaStartSse());
     } else {
       yield put(sagaCheckAuthFailed());
       yield put(sagaDeviceAuthStart());
@@ -160,10 +180,6 @@ function* logout(): Generator<CallEffect | PutEffect, void, SuccessResponse> {
   }
 }
 
-function* startPeriodicFetch(): Generator<CallEffect | ForkEffect, void, void> {
-  yield fork(periodicFetchVideos);
-}
-
 function* fetchVideos(): Generator<
   CallEffect | PutEffect,
   void,
@@ -172,6 +188,7 @@ function* fetchVideos(): Generator<
   try {
     const response: VideosResponse = yield call(api.getVideos);
     yield put(sagaFetchVideosSucceeded(response.videos));
+    yield put(sagaSyncScheduleUpdated(response.next_sync_at));
   } catch (error) {
     const errorMessage = (error as Error).message;
     yield put(sagaFetchVideosFailed(errorMessage));
@@ -179,23 +196,65 @@ function* fetchVideos(): Generator<
   }
 }
 
-const PERIODIC_FETCH_INTERVAL_MS = 5 * 60 * 1000;
+const SSE_POLL_INTERVAL_MS = 30_000;
 
-function* periodicFetchVideos(): Generator<
-  CallEffect | PutEffect,
-  void,
-  VideosResponse
-> {
-  while (true) {
-    yield delay(PERIODIC_FETCH_INTERVAL_MS);
+function* listenToSse(): Generator<Effect, void, void> {
+  let lastNextSyncAt: string | null = null;
+  let pendingSyncComplete = false;
+
+  const eventSource = new EventSource("/api/sync/sse");
+
+  eventSource.addEventListener("init", (event: MessageEvent): void => {
     try {
-      const response: VideosResponse = yield call(api.getVideos);
-      yield put(sagaFetchVideosSucceeded(response.videos));
-    } catch (error) {
-      const errorMessage = (error as Error).message;
-      yield put(sagaFetchVideosFailed(errorMessage));
+      const data = JSON.parse(event.data);
+      lastNextSyncAt = data.next_sync_at;
+    } catch {
+      // ignore parse errors
     }
+  });
+
+  eventSource.addEventListener("sync_schedule", (event: MessageEvent): void => {
+    try {
+      const data = JSON.parse(event.data);
+      lastNextSyncAt = data.next_sync_at;
+    } catch {
+      // ignore parse errors
+    }
+  });
+
+  eventSource.addEventListener("sync_complete", (): void => {
+    pendingSyncComplete = true;
+  });
+
+  try {
+    while (true) {
+      yield delay(SSE_POLL_INTERVAL_MS);
+
+      if (pendingSyncComplete) {
+        pendingSyncComplete = false;
+        yield put(sagaFetchVideosStarted());
+      }
+
+      if (lastNextSyncAt) {
+        yield put(sagaSyncScheduleUpdated(lastNextSyncAt));
+      }
+    }
+  } finally {
+    yield cancelled();
+    eventSource.close();
   }
+}
+
+function* startSseListener(): Generator<CallEffect | ForkEffect, void, void> {
+  if (sseAbortController) {
+    return;
+  }
+  sseAbortController = new AbortController();
+  yield fork(listenToSse);
+}
+
+function* stopSseListener(): Generator<CallEffect, void, void> {
+  // The listenToSse saga handles cleanup in its finally block
 }
 
 function* addVideo(action: {
@@ -345,7 +404,6 @@ export default function* rootSaga(): Generator<unknown, void, unknown> {
     takeEvery(sagaDeviceAuthStart, requestDeviceAuth),
     takeEvery(sagaDeviceAuthRequested, pollDeviceToken),
     takeEvery(sagaFetchVideosStarted, fetchVideos),
-    takeEvery(sagaPeriodicFetchVideosRequested, (_action) => call(fetchVideos)),
     takeEvery(sagaAddVideoRequested, addVideo),
     takeEvery(sagaIgnoreVideoRequested, ignoreVideo),
     takeEvery(sagaIgnoreAllVideosRequested, ignoreAllVideos),
@@ -355,6 +413,7 @@ export default function* rootSaga(): Generator<unknown, void, unknown> {
     takeEvery(sagaSearchChannelsRequested, searchChannels),
     takeEvery(sagaSubscribeRequested, subscribe),
     takeEvery(sagaUnsubscribeRequested, unsubscribe),
-    call(startPeriodicFetch),
+    takeEvery(sagaStartSse, startSseListener),
+    takeEvery(sagaStopSse, stopSseListener),
   ]);
 }

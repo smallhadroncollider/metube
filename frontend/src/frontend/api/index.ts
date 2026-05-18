@@ -58,6 +58,8 @@ const VideosResponseSchema = z.object({
       added_at: z.string().nullable(),
     }),
   ),
+  next_sync_at: z.string().nullable(),
+  is_syncing: z.boolean(),
 });
 
 const SubscriptionsResponseSchema = z.object({

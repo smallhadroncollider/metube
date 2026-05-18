@@ -15,6 +15,7 @@ import {
   getUserTokens,
 } from "../db/repo.js";
 import { createOAuth2ClientFromTokens } from "../auth/auth.js";
+import { isSyncing, getNextSyncAt } from "../sync/autoSync.js";
 
 const requireAuth = (req: Request, res: Response, next: () => void): void => {
   if (!req.session.userId) {
@@ -77,7 +78,8 @@ export const apiRoutes = (db: Database): IRouter => {
   router.get("/videos", (req: Request, res: Response) => {
     const userId = getUserId(req);
     const videos = getPendingVideos(db, userId);
-    res.json({ videos });
+    const nextSyncAt = getNextSyncAt(db);
+    res.json({ videos, next_sync_at: nextSyncAt, is_syncing: isSyncing });
   });
 
   router.post("/videos/:videoId/add", async (req: Request, res: Response) => {
