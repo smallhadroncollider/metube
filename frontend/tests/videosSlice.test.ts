@@ -5,6 +5,7 @@ import {
   sagaFetchVideosStarted,
   sagaFetchVideosSucceeded,
   sagaFetchVideosFailed,
+  sagaPeriodicFetchVideosRequested,
   sagaAddVideoSucceeded,
   sagaAddVideoFailed,
   sagaIgnoreVideoSucceeded,
@@ -132,5 +133,33 @@ describe("Videos Slice", () => {
     store.dispatch(sagaSyncChannelVideosSucceeded());
     const state = store.getState() as { videos: { isSyncing: boolean } };
     expect(state.videos.isSyncing).toBe(false);
+  });
+
+  it("should handle periodic fetch action type", () => {
+    expect(sagaPeriodicFetchVideosRequested.type).toBe(
+      "saga/videos/periodicFetchRequested",
+    );
+  });
+
+  it("should update videos on periodic fetch succeeded", () => {
+    const store = configureStore({ reducer: { videos: videosReducer } });
+    store.dispatch(sagaFetchVideosStarted());
+    store.dispatch(sagaFetchVideosSucceeded(mockVideos));
+    const state = store.getState() as {
+      videos: { videos: Video[]; isLoading: boolean };
+    };
+    expect(state.videos.videos).toHaveLength(2);
+    expect(state.videos.isLoading).toBe(false);
+  });
+
+  it("should set error on periodic fetch failed", () => {
+    const store = configureStore({ reducer: { videos: videosReducer } });
+    store.dispatch(sagaFetchVideosStarted());
+    store.dispatch(sagaFetchVideosFailed("Periodic fetch failed"));
+    const state = store.getState() as {
+      videos: { error: string | null; isLoading: boolean };
+    };
+    expect(state.videos.error).toBe("Periodic fetch failed");
+    expect(state.videos.isLoading).toBe(false);
   });
 });

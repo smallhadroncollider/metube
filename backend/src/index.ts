@@ -9,6 +9,7 @@ import { Database } from "bun:sqlite";
 import { initDb } from "./db/schema.js";
 import { authRoutes } from "./routes/auth.js";
 import { apiRoutes } from "./routes/api.js";
+import { startSyncTimer } from "./sync/autoSync.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -88,4 +89,5 @@ if (process.env.NODE_ENV === "production") {
 
 app.listen(parseInt(port, 10), () => {
   console.log(`Server running on port ${port}`);
+  startSyncTimer(db);
 });

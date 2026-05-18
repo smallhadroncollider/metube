@@ -1,5 +1,5 @@
-import { takeEvery, put, call, all, delay } from "redux-saga/effects";
-import type { CallEffect, PutEffect } from "redux-saga/effects";
+import { takeEvery, put, call, all, delay, fork } from "redux-saga/effects";
+import type { CallEffect, ForkEffect, PutEffect } from "redux-saga/effects";
 import {
   sagaCheckAuthStarted,
   sagaCheckAuthSucceeded,
@@ -16,6 +16,7 @@ import {
   sagaFetchVideosStarted,
   sagaFetchVideosSucceeded,
   sagaFetchVideosFailed,
+  sagaPeriodicFetchVideosRequested,
   sagaAddVideoRequested,
   sagaAddVideoSucceeded,
   sagaAddVideoFailed,
@@ -158,6 +159,10 @@ function* logout(): Generator<CallEffect | PutEffect, void, SuccessResponse> {
   }
 }
 
+function* startPeriodicFetch(): Generator<CallEffect | ForkEffect, void, void> {
+  yield fork(periodicFetchVideos);
+}
+
 function* fetchVideos(): Generator<
   CallEffect | PutEffect,
   void,
@@ -170,6 +175,25 @@ function* fetchVideos(): Generator<
     const errorMessage = (error as Error).message;
     yield put(sagaFetchVideosFailed(errorMessage));
     yield put(addToast({ message: errorMessage, type: "error" }));
+  }
+}
+
+const PERIODIC_FETCH_INTERVAL_MS = 5 * 60 * 1000;
+
+function* periodicFetchVideos(): Generator<
+  CallEffect | PutEffect,
+  void,
+  VideosResponse
+> {
+  while (true) {
+    yield delay(PERIODIC_FETCH_INTERVAL_MS);
+    try {
+      const response: VideosResponse = yield call(api.getVideos);
+      yield put(sagaFetchVideosSucceeded(response.videos));
+    } catch (error) {
+      const errorMessage = (error as Error).message;
+      yield put(sagaFetchVideosFailed(errorMessage));
+    }
   }
 }
 
@@ -309,6 +333,7 @@ export default function* rootSaga(): Generator<unknown, void, unknown> {
     takeEvery(sagaDeviceAuthStart, requestDeviceAuth),
     takeEvery(sagaDeviceAuthRequested, pollDeviceToken),
     takeEvery(sagaFetchVideosStarted, fetchVideos),
+    takeEvery(sagaPeriodicFetchVideosRequested, (_action) => call(fetchVideos)),
     takeEvery(sagaAddVideoRequested, addVideo),
     takeEvery(sagaIgnoreVideoRequested, ignoreVideo),
     takeEvery(sagaSyncVideosRequested, syncVideos),
@@ -317,5 +342,6 @@ export default function* rootSaga(): Generator<unknown, void, unknown> {
     takeEvery(sagaSearchChannelsRequested, searchChannels),
     takeEvery(sagaSubscribeRequested, subscribe),
     takeEvery(sagaUnsubscribeRequested, unsubscribe),
+    call(startPeriodicFetch),
   ]);
 }

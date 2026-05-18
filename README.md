@@ -10,6 +10,8 @@ Curate a single YouTube playlist for your child to watch. Search for channels, s
 - **Video Curation** - New videos appear with title, thumbnail, and description
 - **Add/Ignore** - Add videos to your YouTube playlist or ignore them
 - **Duration Filters** - Auto-ignore videos outside MIN_DURATION / MAX_DURATION on sync
+- **Auto-Sync** - Backend automatically syncs subscribed channels for new videos on a configurable interval
+- **Video Polling** - Frontend polls for latest videos every 5 minutes (non-sync fetch)
 - **Error Handling** - Toast notifications when adding to playlist fails, videos remain pending
 - **Dark Mode** - Toggle between light and dark themes
 - **Sync Subscriptions** - Sync your YouTube account subscriptions
@@ -45,6 +47,10 @@ PORT=3000
 
 - `MIN_DURATION` (default: `60`) — Minimum video duration in seconds. Shorter videos are auto-ignored.
 - `MAX_DURATION` (default: `3600`) — Maximum video duration in seconds. Longer videos are auto-ignored.
+
+#### Auto-Sync
+
+- `REFRESH_INTERVAL_MINUTES` (default: `60`) — How often the backend automatically syncs subscribed channels for new videos. Set to `0` or omit to disable (manual sync only). The backend syncs immediately on startup and then at this interval.
 
 ### 2. Install Dependencies
 
@@ -106,6 +112,7 @@ bun run test:frontend
 - **Sessions**: SQLite-based session store (survives restarts)
 - **API**: REST API with session-based auth
 - **Token Refresh**: Automatic OAuth2 token refresh before API calls
+- **Auto-Sync**: Periodic channel sync via configurable interval timer with concurrency guards
 
 ### Frontend
 
@@ -127,6 +134,7 @@ bun run test:frontend
 │   │   ├── auth/          # OAuth helpers
 │   │   ├── db/            # Database schema and repository
 │   │   ├── routes/        # Express routes
+│   │   ├── sync/          # Auto-sync timer logic
 │   │   └── youtube/       # YouTube API integration
 │   └── tests/             # Backend tests
 ├── frontend/
