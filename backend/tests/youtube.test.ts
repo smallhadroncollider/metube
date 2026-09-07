@@ -1,15 +1,33 @@
-import { describe, it, expect, beforeEach, spyOn } from "bun:test";
+import { describe, expect, it, spyOn, type Mock } from "bun:test";
 import {
   getChannelVideos,
   getVideoDetails,
-  parseDurationSeconds,
   normalizeTimestamp,
+  parseDurationSeconds,
+  searchChannels,
 } from "../src/youtube/youtube.js";
 
-type FetchMockFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit,
-) => Promise<Response>;
+type FetchMock = Mock<typeof fetch>;
+
+const jsonResponse = (body: unknown): Response =>
+  new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json" },
+  });
+
+const notFound = (): Response => new Response("Not Found", { status: 404 });
+
+const mockFetch = (responder: (url: string) => Response): FetchMock => {
+  const fetchMock = spyOn(globalThis, "fetch");
+
+  fetchMock.mockImplementation(((url: string) =>
+    Promise.resolve(responder(url))) as typeof fetch);
+
+  return fetchMock;
+};
+
+const mockEndpoint = (path: string, body: unknown): FetchMock =>
+  mockFetch((url) => (url.includes(path) ? jsonResponse(body) : notFound()));
 
 const makePlaylistItem = (
   videoId: string,
@@ -29,23 +47,19 @@ const makePlaylistItem = (
   },
 });
 
+const makeThumbnail = (url: string): { url: string } => ({ url });
+
 describe("YouTube API", () => {
   describe("channelIdToUploadsPlaylistId", () => {
     it("should convert UC prefix to UU prefix", async () => {
-      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(() =>
-        Promise.resolve(
-          new Response(JSON.stringify({ items: [] }), {
-            status: 200,
-            headers: { "Content-Type": "application/json" },
-          }),
-        ),
-      ) as FetchMockFn;
+      const fetchMock = mockFetch(() => jsonResponse({ items: [] }));
 
       try {
         await getChannelVideos("fake-key", "UCabcdefghijklmnop");
-        const call = fetchMock.mock.calls[0];
-        const url = call[0] as string;
-        expect(url).toContain("playlistId=UUabcdefghijklmnop");
+
+        expect(String(fetchMock.mock.calls[0]?.[0])).toContain(
+          "playlistId=UUabcdefghijklmnop",
+        );
       } finally {
         fetchMock.mockRestore();
       }
@@ -53,35 +67,13 @@ describe("YouTube API", () => {
   });
 
   describe("getChannelVideos", () => {
-    beforeEach(() => {
-      // Reset fetch mock before each test
-    });
-
     it("should return videos from playlist items", async () => {
-      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
-        input: unknown,
-      ) => {
-        const url = typeof input === "string" ? input : (input as Request).url;
-
-        if (url.includes("/playlistItems")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [
-                  makePlaylistItem("vid1", "Video 1", "2024-01-02T00:00:00Z"),
-                  makePlaylistItem("vid2", "Video 2", "2024-01-01T00:00:00Z"),
-                ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-          );
-        }
-
-        return Promise.resolve(new Response("Not Found", { status: 404 }));
-      }) as FetchMockFn);
+      const fetchMock = mockEndpoint("/playlistItems", {
+        items: [
+          makePlaylistItem("vid1", "Video 1", "2024-01-02T00:00:00Z"),
+          makePlaylistItem("vid2", "Video 2", "2024-01-01T00:00:00Z"),
+        ],
+      });
 
       try {
         const videos = await getChannelVideos("fake-key", "UCchannel123");
@@ -97,31 +89,13 @@ describe("YouTube API", () => {
     });
 
     it("should filter by publishedAfter and stop early", async () => {
-      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
-        input: unknown,
-      ) => {
-        const url = typeof input === "string" ? input : (input as Request).url;
-
-        if (url.includes("/playlistItems")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [
-                  makePlaylistItem("vid1", "Video 1", "2024-01-03T00:00:00Z"),
-                  makePlaylistItem("vid2", "Video 2", "2024-01-02T00:00:00Z"),
-                  makePlaylistItem("vid3", "Old Video", "2024-01-01T00:00:00Z"),
-                ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-          );
-        }
-
-        return Promise.resolve(new Response("Not Found", { status: 404 }));
-      }) as FetchMockFn);
+      const fetchMock = mockEndpoint("/playlistItems", {
+        items: [
+          makePlaylistItem("vid1", "Video 1", "2024-01-03T00:00:00Z"),
+          makePlaylistItem("vid2", "Video 2", "2024-01-02T00:00:00Z"),
+          makePlaylistItem("vid3", "Old Video", "2024-01-01T00:00:00Z"),
+        ],
+      });
 
       try {
         const videos = await getChannelVideos(
@@ -135,40 +109,19 @@ describe("YouTube API", () => {
         expect(videos[1]?.videoId).toBe("vid2");
 
         // vid3 should not be included (publishedAt is not after the cutoff)
-        const hasOldVideo = videos.some((v) => v.videoId === "vid3");
-        expect(hasOldVideo).toBe(false);
+        expect(videos.some((video) => video.videoId === "vid3")).toBe(false);
 
         // Should have made 1 fetch call (playlistItems only)
-        expect(fetchMock.mock.calls.length).toBe(1);
+        expect(fetchMock.mock.calls).toHaveLength(1);
       } finally {
         fetchMock.mockRestore();
       }
     });
 
     it("should return empty array when no videos match publishedAfter", async () => {
-      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
-        input: unknown,
-      ) => {
-        const url = typeof input === "string" ? input : (input as Request).url;
-
-        if (url.includes("/playlistItems")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [
-                  makePlaylistItem("vid1", "Old Video", "2024-01-01T00:00:00Z"),
-                ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-          );
-        }
-
-        return Promise.resolve(new Response("Not Found", { status: 404 }));
-      }) as FetchMockFn);
+      const fetchMock = mockEndpoint("/playlistItems", {
+        items: [makePlaylistItem("vid1", "Old Video", "2024-01-01T00:00:00Z")],
+      });
 
       try {
         const videos = await getChannelVideos(
@@ -180,33 +133,17 @@ describe("YouTube API", () => {
         expect(videos).toHaveLength(0);
 
         // Should not call /videos endpoint since no videos matched
-        const videoCalls = fetchMock.mock.calls.filter((call) => {
-          const url = call[0] as string;
-          return url.includes("/videos");
-        });
-        expect(videoCalls.length).toBe(0);
+        const videoCalls = fetchMock.mock.calls.filter((call) =>
+          String(call[0]).includes("/videos"),
+        );
+        expect(videoCalls).toHaveLength(0);
       } finally {
         fetchMock.mockRestore();
       }
     });
 
     it("should return empty array when playlist has no items", async () => {
-      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
-        input: unknown,
-      ) => {
-        const url = typeof input === "string" ? input : (input as Request).url;
-
-        if (url.includes("/playlistItems")) {
-          return Promise.resolve(
-            new Response(JSON.stringify({ items: [] }), {
-              status: 200,
-              headers: { "Content-Type": "application/json" },
-            }),
-          );
-        }
-
-        return Promise.resolve(new Response("Not Found", { status: 404 }));
-      }) as FetchMockFn);
+      const fetchMock = mockEndpoint("/playlistItems", { items: [] });
 
       try {
         const videos = await getChannelVideos("fake-key", "UCchannel123");
@@ -217,46 +154,29 @@ describe("YouTube API", () => {
     });
 
     it("should accept all YouTube thumbnail sizes", async () => {
-      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
-        input: unknown,
-      ) => {
-        const url = typeof input === "string" ? input : (input as Request).url;
-
-        if (url.includes("/playlistItems")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [
-                  {
-                    snippet: {
-                      title: "All Thumbnails",
-                      description: "Has all thumbnail sizes",
-                      publishedAt: "2024-01-01T00:00:00Z",
-                      thumbnails: {
-                        default: { url: "https://thumb.com/default.jpg" },
-                        medium: { url: "https://thumb.com/medium.jpg" },
-                        high: { url: "https://thumb.com/high.jpg" },
-                        standard: { url: "https://thumb.com/standard.jpg" },
-                        maxres: { url: "https://thumb.com/maxres.jpg" },
-                      },
-                    },
-                    contentDetails: { videoId: "vid1" },
-                  },
-                ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
+      const fetchMock = mockEndpoint("/playlistItems", {
+        items: [
+          {
+            snippet: {
+              title: "All Thumbnails",
+              description: "Has all thumbnail sizes",
+              publishedAt: "2024-01-01T00:00:00Z",
+              thumbnails: {
+                default: makeThumbnail("https://thumb.com/default.jpg"),
+                medium: makeThumbnail("https://thumb.com/medium.jpg"),
+                high: makeThumbnail("https://thumb.com/high.jpg"),
+                standard: makeThumbnail("https://thumb.com/standard.jpg"),
+                maxres: makeThumbnail("https://thumb.com/maxres.jpg"),
               },
-            ),
-          );
-        }
-
-        return Promise.resolve(new Response("Not Found", { status: 404 }));
-      }) as FetchMockFn);
+            },
+            contentDetails: { videoId: "vid1" },
+          },
+        ],
+      });
 
       try {
         const videos = await getChannelVideos("fake-key", "UCchannel123");
+
         expect(videos).toHaveLength(1);
         expect(videos[0]?.videoId).toBe("vid1");
         expect(videos[0]?.title).toBe("All Thumbnails");
@@ -265,44 +185,89 @@ describe("YouTube API", () => {
       }
     });
 
-    it("should skip items with missing videoId", async () => {
-      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
-        input: unknown,
-      ) => {
-        const url = typeof input === "string" ? input : (input as Request).url;
-
-        if (url.includes("/playlistItems")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [
-                  {
-                    snippet: {
-                      title: "No Video ID",
-                      description: "",
-                      publishedAt: "2024-01-01T00:00:00Z",
-                      thumbnails: {},
-                    },
-                    contentDetails: { videoId: "" },
-                  },
-                  makePlaylistItem("vid1", "Video 1", "2024-01-01T00:00:00Z"),
-                ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
+    it("should accept unrecognised thumbnail sizes", async () => {
+      const fetchMock = mockEndpoint("/playlistItems", {
+        items: [
+          {
+            snippet: {
+              title: "4K Video",
+              description: "Has a 4K thumbnail",
+              publishedAt: "2024-01-01T00:00:00Z",
+              thumbnails: {
+                high: makeThumbnail("https://thumb.com/high.jpg"),
+                uhd: makeThumbnail("https://thumb.com/uhd.jpg"),
               },
-            ),
-          );
-        }
-
-        return Promise.resolve(new Response("Not Found", { status: 404 }));
-      }) as FetchMockFn);
+            },
+            contentDetails: { videoId: "vid1" },
+          },
+        ],
+      });
 
       try {
         const videos = await getChannelVideos("fake-key", "UCchannel123");
+
+        expect(videos).toHaveLength(1);
+        expect(videos[0]?.thumbnail).toBe("https://thumb.com/high.jpg");
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+
+    it("should skip items with missing videoId", async () => {
+      const fetchMock = mockEndpoint("/playlistItems", {
+        items: [
+          {
+            snippet: {
+              title: "No Video ID",
+              description: "",
+              publishedAt: "2024-01-01T00:00:00Z",
+              thumbnails: {},
+            },
+            contentDetails: { videoId: "" },
+          },
+          makePlaylistItem("vid1", "Video 1", "2024-01-01T00:00:00Z"),
+        ],
+      });
+
+      try {
+        const videos = await getChannelVideos("fake-key", "UCchannel123");
+
         expect(videos).toHaveLength(1);
         expect(videos[0]?.videoId).toBe("vid1");
+      } finally {
+        fetchMock.mockRestore();
+      }
+    });
+  });
+
+  describe("searchChannels", () => {
+    it("should return channels with a default channel thumbnail", async () => {
+      const fetchMock = mockEndpoint("/search", {
+        items: [
+          {
+            id: { channelId: "UCchannel123" },
+            snippet: {
+              title: "Channel",
+              description: "Description",
+              publishedAt: "2024-01-01T00:00:00Z",
+              thumbnails: {
+                uhd: makeThumbnail("https://thumb.com/uhd.jpg"),
+              },
+              channelThumbnails: {
+                default: makeThumbnail("https://thumb.com/avatar.jpg"),
+                uhd: makeThumbnail("https://thumb.com/uhd.jpg"),
+              },
+            },
+          },
+        ],
+      });
+
+      try {
+        const channels = await searchChannels("fake-key", "query");
+
+        expect(channels).toHaveLength(1);
+        expect(channels[0]?.channelId).toBe("UCchannel123");
+        expect(channels[0]?.thumbnail).toBe("https://thumb.com/avatar.jpg");
       } finally {
         fetchMock.mockRestore();
       }
@@ -359,36 +324,18 @@ describe("YouTube API", () => {
     });
 
     it("should fetch durations from video details endpoint", async () => {
-      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
-        input: unknown,
-      ) => {
-        const url = typeof input === "string" ? input : (input as Request).url;
-
-        if (url.includes("/videos")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [
-                  {
-                    id: "vid1",
-                    contentDetails: { duration: "PT10M30S" },
-                  },
-                  {
-                    id: "vid2",
-                    contentDetails: { duration: "PT1H5M" },
-                  },
-                ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-          );
-        }
-
-        return Promise.resolve(new Response("Not Found", { status: 404 }));
-      }) as FetchMockFn);
+      const fetchMock = mockEndpoint("/videos", {
+        items: [
+          {
+            id: "vid1",
+            contentDetails: { duration: "PT10M30S" },
+          },
+          {
+            id: "vid2",
+            contentDetails: { duration: "PT1H5M" },
+          },
+        ],
+      });
 
       try {
         const results = await getVideoDetails("fake-key", ["vid1", "vid2"]);
@@ -404,32 +351,14 @@ describe("YouTube API", () => {
     });
 
     it("should handle missing duration for a video", async () => {
-      const fetchMock = spyOn(globalThis, "fetch").mockImplementation(((
-        input: unknown,
-      ) => {
-        const url = typeof input === "string" ? input : (input as Request).url;
-
-        if (url.includes("/videos")) {
-          return Promise.resolve(
-            new Response(
-              JSON.stringify({
-                items: [
-                  {
-                    id: "vid1",
-                    contentDetails: { duration: "PT10M30S" },
-                  },
-                ],
-              }),
-              {
-                status: 200,
-                headers: { "Content-Type": "application/json" },
-              },
-            ),
-          );
-        }
-
-        return Promise.resolve(new Response("Not Found", { status: 404 }));
-      }) as FetchMockFn);
+      const fetchMock = mockEndpoint("/videos", {
+        items: [
+          {
+            id: "vid1",
+            contentDetails: { duration: "PT10M30S" },
+          },
+        ],
+      });
 
       try {
         const results = await getVideoDetails("fake-key", ["vid1", "vid2"]);

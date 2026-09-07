@@ -25,6 +25,14 @@ const ThumbnailSchema = z.object({
   url: z.string(),
 });
 
+const ThumbnailsSchema = z.object({
+  default: ThumbnailSchema.optional(),
+  medium: ThumbnailSchema.optional(),
+  high: ThumbnailSchema.optional(),
+  standard: ThumbnailSchema.optional(),
+  maxres: ThumbnailSchema.optional(),
+});
+
 const SearchIdSchema = z.object({
   channelId: z.string().optional(),
   videoId: z.string().optional(),
@@ -34,15 +42,7 @@ const SearchSnippetSchema = z.object({
   title: z.string(),
   description: z.string(),
   publishedAt: z.string(),
-  thumbnails: z
-    .object({
-      default: ThumbnailSchema.optional(),
-      medium: ThumbnailSchema.optional(),
-      high: ThumbnailSchema.optional(),
-      standard: ThumbnailSchema.optional(),
-      maxres: ThumbnailSchema.optional(),
-    })
-    .strict(),
+  thumbnails: ThumbnailsSchema,
   channelThumbnails: z
     .object({
       default: ThumbnailSchema,
@@ -59,15 +59,7 @@ const PlaylistItemSnippetSchema = z.object({
   title: z.string(),
   description: z.string(),
   publishedAt: z.string(),
-  thumbnails: z
-    .object({
-      default: ThumbnailSchema.optional(),
-      medium: ThumbnailSchema.optional(),
-      high: ThumbnailSchema.optional(),
-      standard: ThumbnailSchema.optional(),
-      maxres: ThumbnailSchema.optional(),
-    })
-    .strict(),
+  thumbnails: ThumbnailsSchema,
 });
 
 const PlaylistItemContentDetailsSchema = z.object({
